@@ -9,11 +9,10 @@
 ## Quick Start
 
 ```bash
-git clone <repo-url> EdgeAI && cd EdgeAI
-
-# Exclude dev-only files from the working tree
+git clone --no-checkout <repo-url> EdgeAI && cd EdgeAI
 git sparse-checkout init --no-cone
 git sparse-checkout set '/*' '!CLAUDE.md' '!docs/'
+git checkout
 
 cp .env.example .env
 # Edit .env with your values (see Configuration below)
