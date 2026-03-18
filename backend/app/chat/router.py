@@ -35,7 +35,7 @@ async def send_message(
     # Check integration access for user role
     if user.role == ROLE_USER:
         access = await db.execute(
-            select(UserIntegrationAccess).where(
+            select(UserIntegrationAccess.id).where(
                 UserIntegrationAccess.user_id == user.id,
                 UserIntegrationAccess.integration_id == integration_id,
             )

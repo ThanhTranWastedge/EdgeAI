@@ -6,12 +6,25 @@ from app.models import User, Integration, UserIntegrationAccess
 from app.auth.dependencies import require_manager_or_admin
 from app.auth.utils import hash_password
 from app.auth.schemas import UserResponse
-from app.manager.schemas import ManagerUserCreate, ManagerUserUpdate, SetUserAccess, UserAccessResponse
+from app.admin.schemas import UserCreate, UserUpdate
+from app.manager.schemas import SetUserAccess, UserAccessResponse
 from app.constants import ROLE_ADMIN, ROLE_MANAGER, ROLE_USER
 
 router = APIRouter(prefix="/api/manager", tags=["manager"])
 
 ALLOWED_ROLES = (ROLE_USER, ROLE_MANAGER)
+
+
+async def _get_access_list(db: AsyncSession, user_id: str) -> list[UserAccessResponse]:
+    rows = await db.execute(
+        select(UserIntegrationAccess, Integration.name)
+        .join(Integration, UserIntegrationAccess.integration_id == Integration.id)
+        .where(UserIntegrationAccess.user_id == user_id)
+    )
+    return [
+        UserAccessResponse(id=access.id, integration_id=access.integration_id, integration_name=name)
+        for access, name in rows.all()
+    ]
 
 
 @router.get("/users", response_model=list[UserResponse])
@@ -29,7 +42,7 @@ async def list_users(
 
 @router.post("/users", response_model=UserResponse, status_code=201)
 async def create_user(
-    body: ManagerUserCreate,
+    body: UserCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_manager_or_admin),
 ):
@@ -42,6 +55,7 @@ async def create_user(
 
     user = User(
         username=body.username,
+        fullname=body.fullname,
         password_hash=hash_password(body.password),
         role=body.role,
     )
@@ -54,7 +68,7 @@ async def create_user(
 @router.put("/users/{user_id}", response_model=UserResponse)
 async def update_user(
     user_id: str,
-    body: ManagerUserUpdate,
+    body: UserUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_manager_or_admin),
 ):
@@ -75,6 +89,8 @@ async def update_user(
 
     if body.password is not None:
         user.password_hash = hash_password(body.password)
+    if body.fullname is not None:
+        user.fullname = body.fullname
 
     await db.commit()
     await db.refresh(user)
@@ -111,19 +127,11 @@ async def get_user_access(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_manager_or_admin),
 ):
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(select(User.id).where(User.id == user_id))
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="User not found")
 
-    rows = await db.execute(
-        select(UserIntegrationAccess, Integration.name)
-        .join(Integration, UserIntegrationAccess.integration_id == Integration.id)
-        .where(UserIntegrationAccess.user_id == user_id)
-    )
-    return [
-        UserAccessResponse(id=access.id, integration_id=access.integration_id, integration_name=name)
-        for access, name in rows.all()
-    ]
+    return await _get_access_list(db, user_id)
 
 
 @router.put("/users/{user_id}/access", response_model=list[UserAccessResponse])
@@ -133,16 +141,17 @@ async def set_user_access(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_manager_or_admin),
 ):
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(select(User.id).where(User.id == user_id))
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="User not found")
 
     if body.integration_ids:
         existing = await db.execute(
-            select(Integration.id).where(Integration.id.in_(body.integration_ids))
+            select(Integration.id, Integration.name)
+            .where(Integration.id.in_(body.integration_ids))
         )
-        found_ids = {row[0] for row in existing.all()}
-        invalid = set(body.integration_ids) - found_ids
+        found = {row[0]: row[1] for row in existing.all()}
+        invalid = set(body.integration_ids) - found.keys()
         if invalid:
             raise HTTPException(
                 status_code=422, detail=f"Invalid integration IDs: {sorted(invalid)}"
@@ -152,21 +161,19 @@ async def set_user_access(
         delete(UserIntegrationAccess).where(UserIntegrationAccess.user_id == user_id)
     )
 
+    new_rows = []
     for integration_id in body.integration_ids:
-        db.add(UserIntegrationAccess(
+        row = UserIntegrationAccess(
             user_id=user_id,
             integration_id=integration_id,
             granted_by=current_user.id,
-        ))
+        )
+        db.add(row)
+        new_rows.append(row)
 
     await db.commit()
 
-    rows = await db.execute(
-        select(UserIntegrationAccess, Integration.name)
-        .join(Integration, UserIntegrationAccess.integration_id == Integration.id)
-        .where(UserIntegrationAccess.user_id == user_id)
-    )
     return [
-        UserAccessResponse(id=access.id, integration_id=access.integration_id, integration_name=name)
-        for access, name in rows.all()
+        UserAccessResponse(id=row.id, integration_id=row.integration_id, integration_name=found[row.integration_id])
+        for row in new_rows
     ]

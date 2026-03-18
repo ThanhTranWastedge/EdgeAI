@@ -17,14 +17,11 @@ async def list_integrations(
     user: User = Depends(get_current_user),
 ):
     if user.role == ROLE_USER:
-        access_result = await db.execute(
-            select(UserIntegrationAccess.integration_id)
-            .where(UserIntegrationAccess.user_id == user.id)
-        )
-        allowed_ids = {row[0] for row in access_result.all()}
         result = await db.execute(
             select(Integration)
-            .where(Integration.id.in_(allowed_ids))
+            .join(UserIntegrationAccess,
+                  (UserIntegrationAccess.integration_id == Integration.id) &
+                  (UserIntegrationAccess.user_id == user.id))
             .order_by(Integration.created_at)
         )
     else:

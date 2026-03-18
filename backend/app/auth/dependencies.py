@@ -6,6 +6,7 @@ from jose import JWTError
 from app.database import get_db
 from app.models import User
 from app.auth.utils import decode_token
+from app.constants import ROLE_ADMIN, ROLE_MANAGER
 
 security = HTTPBearer()
 
@@ -33,14 +34,12 @@ async def get_current_user(
 
 
 async def require_admin(user: User = Depends(get_current_user)) -> User:
-    from app.constants import ROLE_ADMIN
     if user.role != ROLE_ADMIN:
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
 
 async def require_manager_or_admin(user: User = Depends(get_current_user)) -> User:
-    from app.constants import ROLE_ADMIN, ROLE_MANAGER
     if user.role not in (ROLE_ADMIN, ROLE_MANAGER):
         raise HTTPException(status_code=403, detail="Manager or admin access required")
     return user
