@@ -12,6 +12,14 @@ from jose import JWTError
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
+def _make_tokens(user: User) -> dict:
+    data = {"sub": user.id, "role": user.role}
+    return {
+        "access_token": create_access_token(data),
+        "refresh_token": create_refresh_token(data),
+    }
+
+
 @router.post("/login", response_model=TokenResponse)
 async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.username == body.username))
@@ -22,10 +30,9 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     user.last_login = datetime.now(timezone.utc)
     await db.commit()
 
-    token_data = {"sub": user.id, "role": user.role}
+    tokens = _make_tokens(user)
     return TokenResponse(
-        access_token=create_access_token(token_data),
-        refresh_token=create_refresh_token(token_data),
+        **tokens,
         user=UserResponse.model_validate(user),
     )
 
@@ -45,11 +52,7 @@ async def refresh(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
-    token_data = {"sub": user.id, "role": user.role}
-    return {
-        "access_token": create_access_token(token_data),
-        "refresh_token": create_refresh_token(token_data),
-    }
+    return _make_tokens(user)
 
 
 @router.get("/me", response_model=UserResponse)

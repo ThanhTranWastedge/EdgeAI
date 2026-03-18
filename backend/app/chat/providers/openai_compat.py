@@ -11,6 +11,7 @@ class OpenAICompatProvider(ChatProvider):
         self.model = config["model"]
         self.system_prompt = config.get("system_prompt", "")
         self.parameters = config.get("parameters", {})
+        self._headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
     def _build_messages(self, message: str, context: list[str] | None = None) -> list[dict]:
         messages = []
@@ -26,12 +27,10 @@ class OpenAICompatProvider(ChatProvider):
         messages = self._build_messages(message, context)
         payload = {"model": self.model, "messages": messages, "stream": False, **self.parameters}
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=self._headers, timeout=120.0) as client:
             response = await client.post(
                 f"{self.base_url}/chat/completions",
                 json=payload,
-                headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
-                timeout=120.0,
             )
             response.raise_for_status()
             data = response.json()
@@ -42,13 +41,11 @@ class OpenAICompatProvider(ChatProvider):
         messages = self._build_messages(message, context)
         payload = {"model": self.model, "messages": messages, "stream": True, **self.parameters}
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=self._headers, timeout=120.0) as client:
             async with client.stream(
                 "POST",
                 f"{self.base_url}/chat/completions",
                 json=payload,
-                headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
-                timeout=120.0,
             ) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():

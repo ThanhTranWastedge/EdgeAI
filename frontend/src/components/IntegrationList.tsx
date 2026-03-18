@@ -11,7 +11,7 @@ export default function IntegrationList() {
   }, [])
 
   return (
-    <div style={{ width: 220, background: '#0d1117', borderRight: '1px solid #30363d', padding: 12, overflowY: 'auto' }}>
+    <div style={{ background: '#0d1117', padding: 12, overflowY: 'auto' }}>
       <div style={{ fontSize: 11, color: '#8b949e', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Integrations</div>
       {integrations.map((i) => (
         <div

@@ -85,13 +85,7 @@ async def create_pin(
     await db.commit()
     await db.refresh(pin)
 
-    return PinResponse(
-        id=pin.id,
-        message_id=pin.message_id,
-        integration_id=pin.integration_id,
-        label=pin.label,
-        content=pin.content,
-    )
+    return PinResponse.model_validate(pin)
 
 
 @router.put("/{pin_id}", response_model=PinResponse)
@@ -112,13 +106,7 @@ async def update_pin(
     await db.commit()
     await db.refresh(pin)
 
-    return PinResponse(
-        id=pin.id,
-        message_id=pin.message_id,
-        integration_id=pin.integration_id,
-        label=pin.label,
-        content=pin.content,
-    )
+    return PinResponse.model_validate(pin)
 
 
 @router.delete("/{pin_id}", status_code=204)

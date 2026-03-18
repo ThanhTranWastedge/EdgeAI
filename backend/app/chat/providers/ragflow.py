@@ -1,3 +1,4 @@
+import asyncio
 import json
 from typing import AsyncGenerator
 from ragflow_sdk import RAGFlow
@@ -44,7 +45,7 @@ class RagflowProvider(ChatProvider):
             return result if result else None
         return None
 
-    async def send_message(self, message: str, context: list[str] | None = None) -> ChatResponse:
+    def _sync_send(self, message: str, context: list[str] | None = None) -> ChatResponse:
         rag = RAGFlow(api_key=self.api_key, base_url=self.base_url)
         entity = self._get_entity(rag)
         session = entity.create_session()
@@ -61,6 +62,9 @@ class RagflowProvider(ChatProvider):
             references=references,
             provider_session_id=session.id,
         )
+
+    async def send_message(self, message: str, context: list[str] | None = None) -> ChatResponse:
+        return await asyncio.to_thread(self._sync_send, message, context)
 
     async def stream_message(self, message: str, context: list[str] | None = None) -> AsyncGenerator[StreamChunk, None]:
         rag = RAGFlow(api_key=self.api_key, base_url=self.base_url)

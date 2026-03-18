@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Integration, listIntegrationsApi } from '../api/integrations'
-import { createIntegrationApi, deleteIntegrationApi } from '../api/admin'
+import { Integration, listIntegrationsApi, createIntegrationApi, deleteIntegrationApi } from '../api/integrations'
 
 export default function AdminPanel() {
   const [integrations, setIntegrations] = useState<Integration[]>([])

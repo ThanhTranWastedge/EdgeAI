@@ -1,7 +1,6 @@
 import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
@@ -13,6 +12,10 @@ from app.chat.providers.factory import get_provider
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+
+def _serialize_refs(references) -> str | None:
+    return json.dumps(references) if references else None
 
 
 @router.post("/{integration_id}/send")
@@ -40,31 +43,19 @@ async def send_message(
         pins = pin_result.scalars().all()
         context = [p.content for p in pins]
 
-    # Create session
-    title = body.message[:80] + ("..." if len(body.message) > 80 else "")
-    session = Session(
-        user_id=user.id,
-        integration_id=integration_id,
-        title=title,
-    )
-    db.add(session)
-    await db.flush()
-
-    # Save user message
-    user_msg = Message(
-        session_id=session.id,
-        role="user",
-        content=body.message,
-        sequence=1,
-    )
-    db.add(user_msg)
-
-    # Handle streaming separately
+    # Send to provider first (before creating session) to avoid orphaned rows on failure
     if body.stream:
+        # For streaming, we must create session first since response is async
+        title = body.message[:80] + ("..." if len(body.message) > 80 else "")
+        session = Session(user_id=user.id, integration_id=integration_id, title=title)
+        db.add(session)
+        await db.flush()
+        user_msg = Message(session_id=session.id, role="user", content=body.message, sequence=1)
+        db.add(user_msg)
         await db.commit()
         return await _stream_response(integration, session.id, body.message, context)
 
-    # Non-streaming: send message
+    # Non-streaming: call provider before persisting
     provider = get_provider(integration)
     try:
         response = await provider.send_message(body.message, context=context)
@@ -72,20 +63,26 @@ async def send_message(
         logger.error(f"Provider error: {e}")
         raise HTTPException(status_code=502, detail="Chat provider is unavailable")
 
-    # Save assistant message
+    # Provider succeeded — now persist session + messages
+    title = body.message[:80] + ("..." if len(body.message) > 80 else "")
+    session = Session(
+        user_id=user.id,
+        integration_id=integration_id,
+        title=title,
+        ragflow_session_id=response.provider_session_id,
+    )
+    db.add(session)
+    await db.flush()
+
+    user_msg = Message(session_id=session.id, role="user", content=body.message, sequence=1)
     assistant_msg = Message(
         session_id=session.id,
         role="assistant",
         content=response.content,
-        references=json.dumps(response.references) if response.references else None,
+        references=_serialize_refs(response.references),
         sequence=2,
     )
-    db.add(assistant_msg)
-
-    # Update ragflow session id if present
-    if response.provider_session_id:
-        session.ragflow_session_id = response.provider_session_id
-
+    db.add_all([user_msg, assistant_msg])
     await db.commit()
     await db.refresh(assistant_msg)
 
@@ -130,14 +127,16 @@ async def _stream_response(integration, session_id, message, context):
                 session_id=session_id,
                 role="assistant",
                 content=full_content,
-                references=json.dumps(references) if references else None,
+                references=_serialize_refs(references),
                 sequence=2,
             )
             save_db.add(assistant_msg)
             if provider_session_id:
-                result = await save_db.execute(select(Session).where(Session.id == session_id))
-                sess = result.scalar_one()
-                sess.ragflow_session_id = provider_session_id
+                await save_db.execute(
+                    Session.__table__.update()
+                    .where(Session.__table__.c.id == session_id)
+                    .values(ragflow_session_id=provider_session_id)
+                )
             await save_db.commit()
 
     return EventSourceResponse(event_generator())

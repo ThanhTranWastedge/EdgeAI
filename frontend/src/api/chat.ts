@@ -1,4 +1,4 @@
-import client from './client'
+import client, { TOKEN_KEY } from './client'
 
 export interface MessageData {
   id: string
@@ -39,7 +39,7 @@ export const sendMessageStreamApi = async (
   onDone: (refs: unknown, sessionId: string | null) => void,
   onError: (error: string) => void,
 ) => {
-  const token = localStorage.getItem('access_token')
+  const token = localStorage.getItem(TOKEN_KEY)
   const response = await fetch(`/api/chat/${integrationId}/send`, {
     method: 'POST',
     headers: {

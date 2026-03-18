@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { loginApi, getMeApi, User } from '../api/auth'
+import { TOKEN_KEY, REFRESH_TOKEN_KEY } from '../api/client'
 
 interface AuthState {
   user: User | null
@@ -10,34 +11,35 @@ interface AuthState {
   checkAuth: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  accessToken: localStorage.getItem('access_token'),
+  accessToken: localStorage.getItem(TOKEN_KEY),
   loading: false,
 
   login: async (username, password) => {
     const { data } = await loginApi(username, password)
-    localStorage.setItem('access_token', data.access_token)
-    localStorage.setItem('refresh_token', data.refresh_token)
+    localStorage.setItem(TOKEN_KEY, data.access_token)
+    localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token)
     set({ user: data.user, accessToken: data.access_token })
   },
 
   logout: () => {
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
     set({ user: null, accessToken: null })
     window.location.href = '/login'
   },
 
   checkAuth: async () => {
+    if (get().user) return
     try {
       set({ loading: true })
       const { data } = await getMeApi()
       set({ user: data, loading: false })
     } catch {
       set({ user: null, accessToken: null, loading: false })
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('refresh_token')
+      localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem(REFRESH_TOKEN_KEY)
     }
   },
 }))

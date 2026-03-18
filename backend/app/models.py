@@ -5,6 +5,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
+from app.constants import ROLE_USER
 
 
 def utcnow():
@@ -21,7 +22,7 @@ class User(Base):
     id = Column(String, primary_key=True, default=new_uuid)
     username = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
-    role = Column(String, nullable=False, default="user")  # "admin" or "user"
+    role = Column(String, nullable=False, default=ROLE_USER)
     created_at = Column(DateTime, default=utcnow)
     last_login = Column(DateTime, nullable=True)
 

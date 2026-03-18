@@ -2,14 +2,15 @@ import json
 from app.models import Integration
 from app.chat.providers.base import ChatProvider
 from app.chat.providers.openai_compat import OpenAICompatProvider
+from app.constants import PROVIDER_OPENAI_COMPATIBLE, PROVIDER_RAGFLOW
 
 
 def get_provider(integration: Integration) -> ChatProvider:
     config = json.loads(integration.provider_config)
 
-    if integration.provider_type == "openai_compatible":
+    if integration.provider_type == PROVIDER_OPENAI_COMPATIBLE:
         return OpenAICompatProvider(config)
-    elif integration.provider_type == "ragflow":
+    elif integration.provider_type == PROVIDER_RAGFLOW:
         from app.chat.providers.ragflow import RagflowProvider
         return RagflowProvider(config)
     else:

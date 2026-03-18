@@ -10,7 +10,9 @@ export default function PinSelector({ onClose }: Props) {
   const { allPins, setAllPins, selectedPins, toggleSelectedPin } = usePinStore()
 
   useEffect(() => {
-    listPinsApi().then(({ data }) => setAllPins(data))
+    if (allPins.length === 0) {
+      listPinsApi().then(({ data }) => setAllPins(data))
+    }
   }, [])
 
   return (
