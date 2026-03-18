@@ -18,3 +18,6 @@ export const loginApi = (username: string, password: string) =>
 
 export const getMeApi = () =>
   client.get<User>('/auth/me')
+
+export const changePasswordApi = (data: { current_password: string; new_password: string }) =>
+  client.post('/auth/change-password', data)

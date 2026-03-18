@@ -28,6 +28,8 @@ The chat page has three areas:
 
 Each message creates a new session — EdgeAI is designed for single question-and-answer interactions, not multi-turn conversations.
 
+If the integration has an opening greeting configured, you'll see it as a welcome message when no conversation is active.
+
 The assistant's response streams in real-time. Once complete, the session appears in the sidebar history.
 
 ### Viewing Past Sessions
@@ -115,6 +117,7 @@ Integrations connect EdgeAI to AI providers. As an admin, you can:
    - **Name** — Display name (e.g., "Marketing Assistant")
    - **Provider Type** — Choose RAGFlow or OpenAI Compatible
    - **Config JSON** — Provider-specific configuration (see below)
+   - **Opening Greeting** (optional) — A welcome message shown to users when they select this integration
 3. Click **Add**
 
 To delete an integration, click the **Delete** button next to it.

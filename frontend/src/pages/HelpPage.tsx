@@ -29,6 +29,7 @@ export default function HelpPage() {
           </ol>
           <p style={pStyle}>
             Each message creates a new session — EdgeAI is designed for single question-and-answer interactions.
+            If an integration has an opening greeting, it will appear as a welcome message when you first select it.
           </p>
         </div>
 
@@ -73,6 +74,18 @@ export default function HelpPage() {
           <p style={pStyle}>
             RAGFlow responses may also show <strong>References</strong> at the bottom, listing the source documents used.
           </p>
+        </div>
+
+        <div style={sectionStyle}>
+          <h3 style={h3Style}>Settings</h3>
+          <p style={pStyle}>
+            Click <strong>Settings</strong> in the top navigation bar to access your account settings.
+          </p>
+          <ol style={olStyle}>
+            <li>Enter your current password</li>
+            <li>Enter your new password and confirm it</li>
+            <li>Click <strong>Update Password</strong></li>
+          </ol>
         </div>
 
         <div style={sectionStyle}>

@@ -130,7 +130,7 @@ Authorization: Bearer <access_token>
 | `/api/integrations/{id}` | PUT | Admin | Update integration |
 | `/api/integrations/{id}` | DELETE | Admin | Delete integration |
 
-**IntegrationResponse** deliberately excludes `provider_config` to prevent API key leakage.
+**IntegrationResponse** deliberately excludes `provider_config` to prevent API key leakage. Includes optional `opening_greeting` field (displayed in ChatWindow when no messages exist).
 
 ### Pins
 

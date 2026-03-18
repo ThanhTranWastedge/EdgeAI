@@ -1,6 +1,9 @@
 import { useState } from 'react'
+import { AxiosError } from 'axios'
 import Layout from '../components/Layout'
-import { changePasswordApi } from '../api/settings'
+import { changePasswordApi } from '../api/auth'
+
+const inputStyle = { padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0', width: '100%' }
 
 export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('')
@@ -26,12 +29,11 @@ export default function SettingsPage() {
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to change password')
+    } catch (err) {
+      const detail = err instanceof AxiosError ? err.response?.data?.detail : undefined
+      setError(detail || 'Failed to change password')
     }
   }
-
-  const inputStyle = { padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0', width: '100%' }
 
   return (
     <Layout>
