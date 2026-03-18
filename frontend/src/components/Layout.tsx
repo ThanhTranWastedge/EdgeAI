@@ -11,6 +11,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <span style={{ fontSize: 18, fontWeight: 'bold', color: '#64ffda', cursor: 'pointer' }} onClick={() => navigate('/chat')}>EdgeAI</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ color: '#8b949e', fontSize: 12 }}>{user?.username}</span>
+          {(user?.role === 'manager' || user?.role === 'admin') && (
+            <button onClick={() => navigate('/manager')} style={{ padding: '4px 10px', background: '#21262d', border: '1px solid #30363d', borderRadius: 4, color: '#8b949e', cursor: 'pointer', fontSize: 11 }}>Manager</button>
+          )}
           {user?.role === 'admin' && (
             <button onClick={() => navigate('/admin')} style={{ padding: '4px 10px', background: '#21262d', border: '1px solid #30363d', borderRadius: 4, color: '#8b949e', cursor: 'pointer', fontSize: 11 }}>Admin</button>
           )}

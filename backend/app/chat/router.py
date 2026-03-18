@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
-from app.models import Integration, Session, Message, PinnedResponse, User
+from app.models import Integration, Session, Message, PinnedResponse, User, UserIntegrationAccess
 from app.auth.dependencies import get_current_user
+from app.constants import ROLE_USER
 from app.chat.schemas import SendMessageRequest, SendMessageResponse, SessionResponse, SessionDetailResponse, MessageResponse
 from app.chat.providers.factory import get_provider
 
@@ -30,6 +31,17 @@ async def send_message(
     integration = result.scalar_one_or_none()
     if not integration:
         raise HTTPException(status_code=404, detail="Integration not found")
+
+    # Check integration access for user role
+    if user.role == ROLE_USER:
+        access = await db.execute(
+            select(UserIntegrationAccess).where(
+                UserIntegrationAccess.user_id == user.id,
+                UserIntegrationAccess.integration_id == integration_id,
+            )
+        )
+        if not access.scalar_one_or_none():
+            raise HTTPException(status_code=403, detail="No access to this integration")
 
     # Fetch pinned context if provided
     context = None

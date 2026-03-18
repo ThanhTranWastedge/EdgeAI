@@ -53,7 +53,20 @@ async def test_create_integration_non_admin_forbidden(client):
 
 
 @pytest.mark.asyncio
-async def test_list_integrations(client):
+async def test_list_integrations_admin_sees_all(client):
+    token = await create_admin_and_login(client)
+    await client.post(
+        "/api/integrations",
+        json={"name": "Chat1", "provider_type": "ragflow", "provider_config": {"base_url": "x", "api_key": "k", "chat_id": "c", "type": "chat"}},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    response = await client.get("/api/integrations", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    assert len(response.json()) >= 1
+
+
+@pytest.mark.asyncio
+async def test_list_integrations_user_denied_by_default(client):
     token = await create_admin_and_login(client)
     await client.post(
         "/api/integrations",
@@ -63,7 +76,7 @@ async def test_list_integrations(client):
     user_token = await create_user_and_login(client)
     response = await client.get("/api/integrations", headers={"Authorization": f"Bearer {user_token}"})
     assert response.status_code == 200
-    assert len(response.json()) >= 1
+    assert len(response.json()) == 0
 
 
 @pytest.mark.asyncio

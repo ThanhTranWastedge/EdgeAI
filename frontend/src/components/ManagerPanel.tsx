@@ -1,23 +1,25 @@
 import { useEffect, useState } from 'react'
 import { User } from '../api/auth'
-import { listUsersApi, createUserApi, updateUserApi, deleteUserApi } from '../api/admin'
+import { listManagerUsersApi, createManagerUserApi, updateManagerUserApi, deleteManagerUserApi } from '../api/manager'
 
-export default function UserManagement() {
+export default function ManagerPanel() {
   const [users, setUsers] = useState<User[]>([])
   const [newUsername, setNewUsername] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [newRole, setNewRole] = useState('user')
 
-  const loadUsers = () => listUsersApi().then(({ data }) => setUsers(data))
+  const loadUsers = () => listManagerUsersApi().then(({ data }) => setUsers(data))
   useEffect(() => { loadUsers() }, [])
 
   const handleCreate = async () => {
     if (!newUsername || !newPassword) return
-    await createUserApi(newUsername, newPassword, newRole)
+    await createManagerUserApi(newUsername, newPassword, newRole)
     setNewUsername('')
     setNewPassword('')
     loadUsers()
   }
+
+  const nextRole = (role: string) => role === 'user' ? 'manager' : 'user'
 
   return (
     <div>
@@ -28,7 +30,6 @@ export default function UserManagement() {
         <select value={newRole} onChange={(e) => setNewRole(e.target.value)} style={{ padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0' }}>
           <option value="user">User</option>
           <option value="manager">Manager</option>
-          <option value="admin">Admin</option>
         </select>
         <button onClick={handleCreate} style={{ padding: '8px 16px', background: '#64ffda', color: '#0d1117', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Add</button>
       </div>
@@ -46,13 +47,10 @@ export default function UserManagement() {
               <td style={{ padding: 8 }}>{u.username}</td>
               <td style={{ padding: 8 }}>{u.role}</td>
               <td style={{ padding: 8, textAlign: 'right' }}>
-                <button onClick={async () => {
-                  const cycle: Record<string, string> = { user: 'manager', manager: 'admin', admin: 'user' }
-                  await updateUserApi(u.id, { role: cycle[u.role] || 'user' }); loadUsers()
-                }} style={{ marginRight: 8, padding: '4px 8px', background: '#21262d', border: '1px solid #30363d', borderRadius: 4, color: '#8b949e', cursor: 'pointer', fontSize: 11 }}>
+                <button onClick={async () => { await updateManagerUserApi(u.id, { role: nextRole(u.role) }); loadUsers() }} style={{ marginRight: 8, padding: '4px 8px', background: '#21262d', border: '1px solid #30363d', borderRadius: 4, color: '#8b949e', cursor: 'pointer', fontSize: 11 }}>
                   Toggle Role
                 </button>
-                <button onClick={async () => { if (confirm('Delete user?')) { await deleteUserApi(u.id); loadUsers() } }} style={{ padding: '4px 8px', background: '#21262d', border: '1px solid #cf6679', borderRadius: 4, color: '#cf6679', cursor: 'pointer', fontSize: 11 }}>
+                <button onClick={async () => { if (confirm('Delete user?')) { await deleteManagerUserApi(u.id); loadUsers() } }} style={{ padding: '4px 8px', background: '#21262d', border: '1px solid #cf6679', borderRadius: 4, color: '#cf6679', cursor: 'pointer', fontSize: 11 }}>
                   Delete
                 </button>
               </td>

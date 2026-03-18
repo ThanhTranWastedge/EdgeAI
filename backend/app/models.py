@@ -85,3 +85,16 @@ class PinnedResponse(Base):
 
     message = relationship("Message")
     integration = relationship("Integration")
+
+
+class UserIntegrationAccess(Base):
+    __tablename__ = "user_integration_access"
+    __table_args__ = (
+        UniqueConstraint("user_id", "integration_id", name="uq_user_integration"),
+    )
+
+    id = Column(String, primary_key=True, default=new_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    integration_id = Column(String, ForeignKey("integrations.id"), nullable=False)
+    granted_by = Column(String, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)

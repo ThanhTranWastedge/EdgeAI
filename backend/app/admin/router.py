@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
-from app.models import User
+from app.models import User, UserIntegrationAccess
 from app.auth.dependencies import require_admin
 from app.auth.utils import hash_password
 from app.auth.schemas import UserResponse
@@ -76,5 +76,8 @@ async def delete_user(
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    await db.execute(
+        delete(UserIntegrationAccess).where(UserIntegrationAccess.user_id == user_id)
+    )
     await db.delete(user)
     await db.commit()
