@@ -1,3 +1,4 @@
+import Markdown from 'react-markdown'
 import { MessageData } from '../api/chat'
 
 interface Props {
@@ -18,9 +19,15 @@ export default function MessageBubble({ message, onPin }: Props) {
         padding: '12px 16px',
         maxWidth: '70%',
       }}>
-        <div style={{ color: '#e0e0e0', fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-          {message.content}
-        </div>
+        {isUser ? (
+          <div style={{ color: '#e0e0e0', fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+            {message.content}
+          </div>
+        ) : (
+          <div className="markdown-body" style={{ color: '#e0e0e0', fontSize: 13, lineHeight: 1.6 }}>
+            <Markdown>{message.content}</Markdown>
+          </div>
+        )}
         {!isUser && (
           <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #30363d', display: 'flex', gap: 8 }}>
             {onPin && !message.pinned && (

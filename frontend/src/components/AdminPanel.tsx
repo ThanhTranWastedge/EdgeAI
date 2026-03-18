@@ -12,15 +12,22 @@ export default function AdminPanel() {
   useEffect(() => { load() }, [])
 
   const handleCreate = async () => {
+    let config: Record<string, unknown>
     try {
-      const config = JSON.parse(configJson)
+      config = JSON.parse(configJson)
+    } catch {
+      alert('Invalid JSON config')
+      return
+    }
+    try {
       await createIntegrationApi({ name, provider_type: providerType, provider_config: config, opening_greeting: greeting || undefined })
       setName('')
       setConfigJson('{}')
       setGreeting('')
       load()
-    } catch {
-      alert('Invalid JSON config')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to create integration'
+      alert(msg)
     }
   }
 
