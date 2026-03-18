@@ -72,18 +72,42 @@ class RagflowProvider(ChatProvider):
         session = entity.create_session()
         question = self._build_question(message, context)
 
-        last_content = ""
-        references = None
-        for chunk in session.ask(question, stream=True):
-            new_text = chunk.content[len(last_content):]
-            last_content = chunk.content
-            references = self._extract_references(chunk)
-            if new_text:
-                yield StreamChunk(content=new_text)
+        queue: asyncio.Queue[StreamChunk | None] = asyncio.Queue()
 
-        yield StreamChunk(
-            content="",
-            done=True,
-            references=references,
-            provider_session_id=session.id,
-        )
+        def _stream_sync():
+            last_content = ""
+            references = None
+            try:
+                for chunk in session.ask(question, stream=True):
+                    new_text = chunk.content[len(last_content):]
+                    last_content = chunk.content
+                    references = self._extract_references(chunk)
+                    if new_text:
+                        queue.put_nowait(StreamChunk(content=new_text))
+            except Exception as e:
+                queue.put_nowait(StreamChunk(content=str(e), done=True))
+                return
+            queue.put_nowait(StreamChunk(
+                content="",
+                done=True,
+                references=references,
+                provider_session_id=session.id,
+            ))
+
+        loop = asyncio.get_event_loop()
+        task = loop.run_in_executor(None, _stream_sync)
+
+        while True:
+            # Wait for either a chunk or the thread to finish
+            try:
+                chunk = await asyncio.wait_for(queue.get(), timeout=0.1)
+                yield chunk
+                if chunk.done:
+                    break
+            except asyncio.TimeoutError:
+                if task.done():
+                    # Drain remaining items
+                    while not queue.empty():
+                        chunk = queue.get_nowait()
+                        yield chunk
+                    break

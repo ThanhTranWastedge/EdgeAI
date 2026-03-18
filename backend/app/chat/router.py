@@ -116,19 +116,22 @@ async def _stream_response(integration, session_id, message, context):
         provider_session_id = None
 
         try:
+            chunk_count = 0
             async for chunk in provider.stream_message(message, context=context):
                 if chunk.done:
                     references = chunk.references
                     provider_session_id = chunk.provider_session_id
+                    logger.debug(f"Stream complete: {chunk_count} chunks, {len(full_content)} chars")
                     yield {"event": "done", "data": json.dumps({
                         "references": references,
                         "provider_session_id": provider_session_id,
                     })}
                 else:
+                    chunk_count += 1
                     full_content += chunk.content
                     yield {"data": chunk.content}
         except Exception as e:
-            logger.error(f"Stream error: {e}")
+            logger.error(f"Stream error after {chunk_count} chunks ({len(full_content)} chars): {e}")
             yield {"event": "error", "data": json.dumps({"detail": "Provider error during streaming"})}
             return
 

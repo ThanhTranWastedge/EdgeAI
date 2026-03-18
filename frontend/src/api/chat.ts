@@ -59,34 +59,50 @@ export const sendMessageStreamApi = async (
   if (!reader) return
 
   let buffer = ''
+  let currentEvent = ''
+  let dataLines: string[] = []
+
+  const flushEvent = () => {
+    if (dataLines.length === 0) return
+    const data = dataLines.join('\n')
+    dataLines = []
+
+    if (currentEvent === 'done' || currentEvent === 'error') {
+      try {
+        const meta = JSON.parse(data)
+        if (currentEvent === 'done' && meta.references !== undefined) {
+          onDone(meta.references, meta.provider_session_id)
+        }
+        if (currentEvent === 'error' && meta.detail) {
+          onError(meta.detail)
+        }
+      } catch {
+        // ignore malformed metadata
+      }
+    } else {
+      onChunk(data)
+    }
+    currentEvent = ''
+  }
+
   while (true) {
     const { done, value } = await reader.read()
-    if (done) break
+    if (done) {
+      flushEvent()
+      break
+    }
     buffer += decoder.decode(value, { stream: true })
     const lines = buffer.split('\n')
     buffer = lines.pop() || ''
 
     for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        onChunk(line.slice(6))
-      } else if (line.startsWith('event: done')) {
-        // Next data line has metadata
-      } else if (line.startsWith('event: error')) {
-        // Next data line has error
-      }
-      // Parse "data:" after "event: done"
-      if (line.startsWith('data: {')) {
-        try {
-          const meta = JSON.parse(line.slice(6))
-          if (meta.references !== undefined) {
-            onDone(meta.references, meta.provider_session_id)
-          }
-          if (meta.detail) {
-            onError(meta.detail)
-          }
-        } catch {
-          // plain text chunk, already handled
-        }
+      if (line.startsWith('event: ')) {
+        flushEvent()
+        currentEvent = line.slice(7)
+      } else if (line.startsWith('data: ')) {
+        dataLines.push(line.slice(6))
+      } else if (line === '') {
+        flushEvent()
       }
     }
   }
