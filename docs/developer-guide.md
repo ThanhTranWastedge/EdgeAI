@@ -15,8 +15,8 @@ EdgeAI is a chat gateway with a FastAPI async backend, React frontend, and SQLit
 ├──────────────────────┼──────────────────────────────┤
 │  Backend (FastAPI)   │                              │
 │  ┌─────────┐  ┌──────┴──────┐  ┌────────────────┐  │
-│  │Auth     │  │Chat Router  │  │Admin/Pins/     │  │
-│  │Router   │  │(send+stream)│  │Integrations    │  │
+│  │Auth     │  │Chat Router  │  │Admin/Manager/  │  │
+│  │Router   │  │(send+stream)│  │Pins/Integr.    │  │
 │  └─────────┘  └──────┬──────┘  └────────────────┘  │
 │                      │                              │
 │          ┌───────────┴───────────┐                  │
@@ -29,7 +29,7 @@ EdgeAI is a chat gateway with a FastAPI async backend, React frontend, and SQLit
 │  ┌───────────────────┴──────────────────────────┐   │
 │  │  SQLite (WAL mode) — SQLAlchemy async ORM    │   │
 │  │  Users | Integrations | Sessions | Messages  │   │
-│  │  PinnedResponses                             │   │
+│  │  PinnedResponses | UserIntegrationAccess     │   │
 │  └──────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────┘
 ```
@@ -124,7 +124,7 @@ Authorization: Bearer <access_token>
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| `/api/integrations` | GET | User | List all integrations |
+| `/api/integrations` | GET | User | List integrations (filtered by access for user role) |
 | `/api/integrations` | POST | Admin | Create integration |
 | `/api/integrations/{id}` | PUT | Admin | Update integration |
 | `/api/integrations/{id}` | DELETE | Admin | Delete integration |
@@ -146,10 +146,23 @@ Duplicate pin per user+message returns `409 Conflict`.
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| `/api/admin/users` | GET | Admin | List users (paginated) |
-| `/api/admin/users` | POST | Admin | Create user `{username, password, role}` |
+| `/api/admin/users` | GET | Admin | List all users (paginated) |
+| `/api/admin/users` | POST | Admin | Create user `{username, password, role}` (any role) |
 | `/api/admin/users/{id}` | PUT | Admin | Update role/password |
 | `/api/admin/users/{id}` | DELETE | Admin | Delete user |
+
+### Manager
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/manager/users` | GET | Manager/Admin | List non-admin users |
+| `/api/manager/users` | POST | Manager/Admin | Create user/manager (not admin) |
+| `/api/manager/users/{id}` | PUT | Manager/Admin | Update user/manager role or password |
+| `/api/manager/users/{id}` | DELETE | Manager/Admin | Delete user/manager |
+| `/api/manager/users/{id}/access` | GET | Manager/Admin | List user's integration access |
+| `/api/manager/users/{id}/access` | PUT | Manager/Admin | Replace user's integration access `{integration_ids: [str]}` |
+
+**Guard rails:** Managers cannot create/edit/delete admin accounts, change their own role, or delete themselves.
 
 ## Database Schema
 
@@ -175,7 +188,16 @@ pinned_responses
   id, user_id → users.id, message_id → messages.id,
   integration_id → integrations.id, label, content, created_at
   UNIQUE(user_id, message_id)
+
+user_integration_access
+  id, user_id → users.id, integration_id → integrations.id,
+  granted_by → users.id, created_at
+  UNIQUE(user_id, integration_id)
 ```
+
+**Access control:** Users with role `user` only see integrations where a matching `user_integration_access` row exists (deny-by-default). Managers and admins see all integrations.
+
+**Cascade behavior:** Deleting a user or integration explicitly deletes related `user_integration_access` rows via pre-delete queries (not FK CASCADE, since SQLite `PRAGMA foreign_keys` is not enabled).
 
 ## Adding a New Provider
 
@@ -269,13 +291,13 @@ with patch("app.chat.router.get_provider") as mock:
     response = await client.post(f"/api/chat/{integration_id}/send", ...)
 ```
 
-### Testing Admin-Only Endpoints
+### Testing Role-Protected Endpoints
 
-Create a user with `role="admin"` to test admin endpoints. Create a user with `role="user"` and verify `403 Forbidden` for write operations.
+Create users with `role="admin"`, `role="manager"`, or `role="user"` to test endpoints with different authorization levels. Manager endpoints (`/api/manager/*`) accept both manager and admin roles. Verify `403 Forbidden` for unauthorized roles. See `tests/test_manager.py` for comprehensive examples of guard rail testing.
 
 ## Project Conventions
 
-- **Constants** over string literals: use `app/constants.py` for roles and provider types
+- **Constants** over string literals: use `app/constants.py` for roles (`ROLE_ADMIN`, `ROLE_MANAGER`, `ROLE_USER`) and provider types
 - **`model_validate`** for Pydantic responses: `UserResponse.model_validate(user)`, not manual field construction
 - **UUID string PKs**: all models use `str(uuid.uuid4())`, not integer autoincrement
 - **Async everywhere**: all DB operations use `async/await`. Sync libraries (like ragflow-sdk) are wrapped in `asyncio.to_thread()`

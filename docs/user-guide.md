@@ -67,9 +67,33 @@ Each assistant response has two action buttons:
 
 RAGFlow responses may also show **References** at the bottom, listing the source documents used to generate the answer.
 
+## Manager Features
+
+If your account has the **manager** role, you'll see a **Manager** button in the top navigation bar. Managers can create and manage user accounts and control which integrations each user can access.
+
+### Managing Users
+
+1. Go to **Manager** > **Users**
+2. To add a user: enter username, password, select role (User or Manager), click **Add**
+3. To toggle a user's role between User and Manager: click **Toggle Role**
+4. To remove a user: click **Delete**
+
+Managers cannot create, edit, or delete admin accounts, and cannot change their own role.
+
+### Managing Integration Access
+
+Users have **no access to any integration by default**. A manager or admin must explicitly grant access.
+
+1. Go to **Manager** > **Integration Access**
+2. Select a user from the dropdown
+3. Check the integrations the user should have access to
+4. Click **Save Access**
+
+Users will only see and be able to chat with integrations they've been granted access to. Managers and admins always see all integrations.
+
 ## Admin Features
 
-If your account has admin privileges, you'll see an **Admin** button in the top navigation bar.
+If your account has admin privileges, you'll see both **Manager** and **Admin** buttons in the top navigation bar. Admins have all manager capabilities plus the ability to manage integrations and all user roles.
 
 ### Managing Integrations
 
@@ -125,12 +149,14 @@ Works with OpenAI, OpenRouter, local models (Ollama, vLLM), or any API following
 
 The `system_prompt` and `parameters` fields are optional.
 
-### Managing Users
+### Managing Users (Admin)
 
 1. Go to **Admin** > **Users**
-2. To add a user: enter username, password, select role (User or Admin), click **Add**
-3. To change a user's role: click **Toggle Role**
+2. To add a user: enter username, password, select role (User, Manager, or Admin), click **Add**
+3. To cycle a user's role (User → Manager → Admin): click **Toggle Role**
 4. To remove a user: click **Delete**
+
+Admins can manage all roles including other admins. For day-to-day user management, the Manager page is recommended.
 
 ## Deployment
 
