@@ -10,6 +10,7 @@ from app.auth.router import router as auth_router
 from app.integrations.router import router as integrations_router
 from app.chat.router import router as chat_router
 from app.pins.router import router as pins_router
+from app.admin.router import router as admin_router
 
 
 @asynccontextmanager
@@ -45,6 +46,7 @@ app.include_router(auth_router)
 app.include_router(integrations_router)
 app.include_router(chat_router)
 app.include_router(pins_router)
+app.include_router(admin_router)
 
 
 @app.get("/api/health")
