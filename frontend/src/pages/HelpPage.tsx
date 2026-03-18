@@ -1,4 +1,5 @@
 import Layout from '../components/Layout'
+import { useAuthStore } from '../store/authStore'
 
 const sectionStyle = { marginBottom: 28 }
 const h3Style = { color: '#64ffda', marginBottom: 8, fontSize: 16 }
@@ -7,6 +8,9 @@ const olStyle = { color: '#c9d1d9', lineHeight: 1.8, paddingLeft: 20, margin: '4
 const codeStyle = { background: '#21262d', padding: '2px 6px', borderRadius: 3, fontSize: 13, color: '#e0e0e0' }
 
 export default function HelpPage() {
+  const user = useAuthStore((s) => s.user)
+  const isManagerOrAdmin = user?.role === 'manager' || user?.role === 'admin'
+
   return (
     <Layout>
       <div style={{ flex: 1, padding: 32, overflowY: 'auto', maxWidth: 720 }}>
@@ -95,6 +99,41 @@ export default function HelpPage() {
             If you don't see any integrations, contact your manager to request access.
           </p>
         </div>
+
+        {isManagerOrAdmin && (
+          <>
+            <h2 style={{ color: '#64ffda', marginBottom: 16, marginTop: 32, borderTop: '1px solid #30363d', paddingTop: 24 }}>Manager Guide</h2>
+
+            <div style={sectionStyle}>
+              <h3 style={h3Style}>Managing Users</h3>
+              <ol style={olStyle}>
+                <li>Go to <strong>Manager</strong> in the top navigation bar</li>
+                <li>Under <strong>Users</strong>, enter a username, password, and select a role (User or Manager)</li>
+                <li>Click <strong>Add</strong> to create the account</li>
+              </ol>
+              <p style={pStyle}>
+                You can also <strong>Toggle Role</strong> to switch a user between User and Manager, or <strong>Delete</strong> to remove an account.
+                Managers cannot create, edit, or delete admin accounts.
+              </p>
+            </div>
+
+            <div style={sectionStyle}>
+              <h3 style={h3Style}>Managing Integration Access</h3>
+              <p style={pStyle}>
+                Users have <strong>no access to any integration by default</strong>. You must explicitly grant access for each user.
+              </p>
+              <ol style={olStyle}>
+                <li>Go to <strong>Manager</strong> &gt; <strong>Integration Access</strong></li>
+                <li>Select a user from the dropdown</li>
+                <li>Check the integrations the user should have access to</li>
+                <li>Click <strong>Save Access</strong></li>
+              </ol>
+              <p style={pStyle}>
+                Users will only see integrations they have been granted access to. Managers and admins always see all integrations.
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </Layout>
   )

@@ -29,9 +29,6 @@ export default function IntegrationList() {
           <div style={{ fontSize: 13, color: activeIntegration?.id === i.id ? '#fff' : '#c9d1d9' }}>
             {i.icon || '\uD83D\uDCAC'} {i.name}
           </div>
-          <div style={{ fontSize: 10, color: activeIntegration?.id === i.id ? '#64ffda' : '#8b949e' }}>
-            {i.provider_type === 'ragflow' ? 'ragflow' : 'openai'}
-          </div>
         </div>
       ))}
     </div>
