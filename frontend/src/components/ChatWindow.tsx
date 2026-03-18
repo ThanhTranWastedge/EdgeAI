@@ -89,9 +89,6 @@ export default function ChatWindow() {
       <div style={{ padding: '12px 20px', borderBottom: '1px solid #30363d', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <span style={{ fontSize: 15, color: '#fff' }}>{activeIntegration.icon || '\uD83D\uDCAC'} {activeIntegration.name}</span>
-          <span style={{ fontSize: 11, color: '#64ffda', marginLeft: 8, padding: '2px 6px', background: 'rgba(100,255,218,0.1)', borderRadius: 3 }}>
-            {activeIntegration.provider_type}
-          </span>
         </div>
         <span style={{ fontSize: 11, color: '#8b949e' }}>New session each message</span>
       </div>
