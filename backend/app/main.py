@@ -8,6 +8,7 @@ from app.models import User
 from app.auth.utils import hash_password
 from app.auth.router import router as auth_router
 from app.integrations.router import router as integrations_router
+from app.chat.router import router as chat_router
 
 
 @asynccontextmanager
@@ -41,6 +42,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(integrations_router)
+app.include_router(chat_router)
 
 
 @app.get("/api/health")
