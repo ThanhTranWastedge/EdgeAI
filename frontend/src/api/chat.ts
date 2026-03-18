@@ -95,7 +95,8 @@ export const sendMessageStreamApi = async (
     const lines = buffer.split('\n')
     buffer = lines.pop() || ''
 
-    for (const line of lines) {
+    for (const rawLine of lines) {
+      const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine
       if (line.startsWith('event: ')) {
         flushEvent()
         currentEvent = line.slice(7)

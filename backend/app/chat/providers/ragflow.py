@@ -76,21 +76,25 @@ class RagflowProvider(ChatProvider):
 
         def _stream_sync():
             last_content = ""
-            references = None
+            last_chunk = None
             try:
                 for chunk in session.ask(question, stream=True):
-                    new_text = chunk.content[len(last_content):]
-                    last_content = chunk.content
-                    references = self._extract_references(chunk)
+                    content = chunk.content or ""
+                    if content.startswith(last_content):
+                        new_text = content[len(last_content):]
+                    else:
+                        # Content reset (e.g. agent switching components)
+                        new_text = content
+                    last_content = content
+                    last_chunk = chunk
                     if new_text:
                         queue.put_nowait(StreamChunk(content=new_text))
             except Exception as e:
                 queue.put_nowait(StreamChunk(content=str(e), done=True))
                 return
+            references = self._extract_references(last_chunk) if last_chunk else None
             queue.put_nowait(StreamChunk(
-                content="",
-                done=True,
-                references=references,
+                content="", done=True, references=references,
                 provider_session_id=session.id,
             ))
 
