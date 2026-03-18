@@ -8,6 +8,7 @@ class IntegrationCreate(BaseModel):
     provider_config: dict[str, Any]
     description: str | None = None
     icon: str | None = None
+    opening_greeting: str | None = None
 
 
 class IntegrationUpdate(BaseModel):
@@ -15,6 +16,7 @@ class IntegrationUpdate(BaseModel):
     provider_config: dict[str, Any] | None = None
     description: str | None = None
     icon: str | None = None
+    opening_greeting: str | None = None
 
 
 class IntegrationResponse(BaseModel):
@@ -23,5 +25,6 @@ class IntegrationResponse(BaseModel):
     provider_type: str
     description: str | None
     icon: str | None
+    opening_greeting: str | None = None
 
     model_config = {"from_attributes": True}

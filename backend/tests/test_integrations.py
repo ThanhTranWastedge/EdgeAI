@@ -108,3 +108,35 @@ async def test_delete_integration(client):
     iid = create.json()["id"]
     response = await client.delete(f"/api/integrations/{iid}", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_create_integration_with_greeting(client):
+    token = await create_admin_and_login(client)
+    response = await client.post(
+        "/api/integrations",
+        json={"name": "Greeter", "provider_type": "ragflow", "provider_config": {"base_url": "x", "api_key": "k", "chat_id": "c", "type": "chat"}, "opening_greeting": "Hello! How can I help?"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
+    assert response.json()["opening_greeting"] == "Hello! How can I help?"
+
+
+@pytest.mark.asyncio
+async def test_update_integration_greeting(client):
+    token = await create_admin_and_login(client)
+    create = await client.post(
+        "/api/integrations",
+        json={"name": "G2", "provider_type": "ragflow", "provider_config": {"base_url": "x", "api_key": "k", "chat_id": "c", "type": "chat"}},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    iid = create.json()["id"]
+    assert create.json()["opening_greeting"] is None
+
+    response = await client.put(
+        f"/api/integrations/{iid}",
+        json={"opening_greeting": "Welcome!"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["opening_greeting"] == "Welcome!"

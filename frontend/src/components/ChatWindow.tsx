@@ -98,6 +98,21 @@ export default function ChatWindow() {
 
       <div style={{ flex: 1, padding: 20, overflowY: 'auto' }}>
         <PinnedBanner pins={selectedPins} onRemove={removeSelectedPin} />
+        {currentMessages.length === 0 && activeIntegration.opening_greeting && (
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 16 }}>
+            <div style={{
+              background: '#161b22',
+              border: '1px solid #30363d',
+              borderRadius: '12px 12px 12px 2px',
+              padding: '12px 16px',
+              maxWidth: '70%',
+            }}>
+              <div style={{ color: '#e0e0e0', fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                {activeIntegration.opening_greeting}
+              </div>
+            </div>
+          </div>
+        )}
         {currentMessages.map((m, i) => (
           <MessageBubble key={i} message={m} onPin={m.role === 'assistant' ? handlePin : undefined} />
         ))}

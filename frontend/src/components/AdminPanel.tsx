@@ -6,6 +6,7 @@ export default function AdminPanel() {
   const [name, setName] = useState('')
   const [providerType, setProviderType] = useState('ragflow')
   const [configJson, setConfigJson] = useState('{}')
+  const [greeting, setGreeting] = useState('')
 
   const load = () => listIntegrationsApi().then(({ data }) => setIntegrations(data))
   useEffect(() => { load() }, [])
@@ -13,9 +14,10 @@ export default function AdminPanel() {
   const handleCreate = async () => {
     try {
       const config = JSON.parse(configJson)
-      await createIntegrationApi({ name, provider_type: providerType, provider_config: config })
+      await createIntegrationApi({ name, provider_type: providerType, provider_config: config, opening_greeting: greeting || undefined })
       setName('')
       setConfigJson('{}')
+      setGreeting('')
       load()
     } catch {
       alert('Invalid JSON config')
@@ -32,6 +34,7 @@ export default function AdminPanel() {
           <option value="openai_compatible">OpenAI Compatible</option>
         </select>
         <textarea placeholder='{"base_url":"...","api_key":"..."}' value={configJson} onChange={(e) => setConfigJson(e.target.value)} rows={2} style={{ padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0', flex: 1, minWidth: 300, fontFamily: 'monospace', fontSize: 12 }} />
+        <input placeholder="Opening Greeting (optional)" value={greeting} onChange={(e) => setGreeting(e.target.value)} style={{ padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0', flex: 1, minWidth: 200 }} />
         <button onClick={handleCreate} style={{ padding: '8px 16px', background: '#64ffda', color: '#0d1117', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Add</button>
       </div>
       {integrations.map((i) => (

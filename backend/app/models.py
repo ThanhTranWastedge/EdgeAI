@@ -37,6 +37,7 @@ class Integration(Base):
     provider_config = Column(Text, nullable=False)  # JSON string
     description = Column(Text, nullable=True)
     icon = Column(String, nullable=True)
+    opening_greeting = Column(Text, nullable=True)
     created_at = Column(DateTime, default=utcnow)
     updated_by = Column(String, ForeignKey("users.id"), nullable=False)
 

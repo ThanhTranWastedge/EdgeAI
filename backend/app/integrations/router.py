@@ -41,6 +41,7 @@ async def create_integration(
         provider_config=json.dumps(body.provider_config),
         description=body.description,
         icon=body.icon,
+        opening_greeting=body.opening_greeting,
         updated_by=admin.id,
     )
     db.add(integration)
@@ -69,6 +70,8 @@ async def update_integration(
         integration.description = body.description
     if body.icon is not None:
         integration.icon = body.icon
+    if body.opening_greeting is not None:
+        integration.opening_greeting = body.opening_greeting
     integration.updated_by = admin.id
 
     await db.commit()

@@ -6,12 +6,13 @@ export interface Integration {
   provider_type: string
   description: string | null
   icon: string | null
+  opening_greeting: string | null
 }
 
 export const listIntegrationsApi = () =>
   client.get<Integration[]>('/integrations')
 
-export const createIntegrationApi = (data: { name: string; provider_type: string; provider_config: Record<string, unknown>; description?: string; icon?: string }) =>
+export const createIntegrationApi = (data: { name: string; provider_type: string; provider_config: Record<string, unknown>; description?: string; icon?: string; opening_greeting?: string }) =>
   client.post<Integration>('/integrations', data)
 
 export const updateIntegrationApi = (id: string, data: Record<string, unknown>) =>
