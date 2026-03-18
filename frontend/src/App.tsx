@@ -5,6 +5,7 @@ import ChatPage from './pages/ChatPage'
 import AdminPage from './pages/AdminPage'
 import ManagerPage from './pages/ManagerPage'
 import HelpPage from './pages/HelpPage'
+import SettingsPage from './pages/SettingsPage'
 
 function App() {
   const { accessToken } = useAuthStore()
@@ -21,6 +22,9 @@ function App() {
         } />
         <Route path="/help" element={
           accessToken ? <HelpPage /> : <Navigate to="/login" />
+        } />
+        <Route path="/settings" element={
+          accessToken ? <SettingsPage /> : <Navigate to="/login" />
         } />
         <Route path="/admin" element={
           accessToken ? <AdminPage /> : <Navigate to="/login" />

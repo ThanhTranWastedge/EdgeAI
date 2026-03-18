@@ -18,6 +18,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <button onClick={() => navigate('/admin')} style={{ padding: '4px 10px', background: '#21262d', border: '1px solid #30363d', borderRadius: 4, color: '#8b949e', cursor: 'pointer', fontSize: 11 }}>Admin</button>
           )}
           <button onClick={() => navigate('/help')} style={{ padding: '4px 10px', background: '#21262d', border: '1px solid #30363d', borderRadius: 4, color: '#8b949e', cursor: 'pointer', fontSize: 11 }}>Help</button>
+          <button onClick={() => navigate('/settings')} style={{ padding: '4px 10px', background: '#21262d', border: '1px solid #30363d', borderRadius: 4, color: '#8b949e', cursor: 'pointer', fontSize: 11 }}>Settings</button>
           <button onClick={logout} style={{ padding: '4px 10px', background: '#21262d', border: '1px solid #30363d', borderRadius: 4, color: '#8b949e', cursor: 'pointer', fontSize: 11 }}>Logout</button>
         </div>
       </header>

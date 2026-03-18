@@ -4,8 +4,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import User
-from app.auth.utils import verify_password, create_access_token, create_refresh_token, decode_token
-from app.auth.schemas import LoginRequest, TokenResponse, RefreshRequest, UserResponse
+from app.auth.utils import verify_password, hash_password, create_access_token, create_refresh_token, decode_token
+from app.auth.schemas import LoginRequest, TokenResponse, RefreshRequest, UserResponse, ChangePasswordRequest
 from app.auth.dependencies import get_current_user
 from jose import JWTError
 
@@ -58,3 +58,16 @@ async def refresh(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 async def me(user: User = Depends(get_current_user)):
     return UserResponse.model_validate(user)
+
+
+@router.post("/change-password")
+async def change_password(
+    body: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not verify_password(body.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    user.password_hash = hash_password(body.new_password)
+    await db.commit()
+    return {"message": "Password updated"}

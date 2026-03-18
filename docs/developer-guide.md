@@ -106,6 +106,7 @@ Authorization: Bearer <access_token>
 | `/api/auth/login` | POST | No | `{username, password}` → `{access_token, refresh_token, user}` |
 | `/api/auth/refresh` | POST | No | `{refresh_token}` → `{access_token, refresh_token}` |
 | `/api/auth/me` | GET | User | Current user info |
+| `/api/auth/change-password` | POST | User | Change own password `{current_password, new_password}` |
 
 ### Chat
 
@@ -174,7 +175,7 @@ users
 
 integrations
   id, name, provider_type, provider_config (JSON), description, icon,
-  created_at, updated_by → users.id
+  opening_greeting, created_at, updated_by → users.id
 
 sessions
   id, user_id → users.id, integration_id → integrations.id,

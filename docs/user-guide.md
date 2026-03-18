@@ -67,6 +67,17 @@ Each assistant response has two action buttons:
 
 RAGFlow responses may also show **References** at the bottom, listing the source documents used to generate the answer.
 
+## Settings
+
+Click the **Settings** button in the top navigation bar to access your account settings.
+
+### Changing Your Password
+
+1. Go to **Settings**
+2. Enter your current password
+3. Enter your new password and confirm it
+4. Click **Update Password**
+
 ## Manager Features
 
 If your account has the **manager** role, you'll see a **Manager** button in the top navigation bar. Managers can create and manage user accounts and control which integrations each user can access.
