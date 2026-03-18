@@ -167,7 +167,7 @@ async def list_sessions(
         select(Session)
         .where(Session.user_id == user.id, Session.integration_id == integration_id)
         .order_by(Session.created_at.desc())
-        .limit(10)
+        .limit(100)
     )
     sessions = result.scalars().all()
     return [SessionResponse.model_validate(s) for s in sessions]
