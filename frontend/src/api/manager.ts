@@ -10,10 +10,10 @@ export interface UserAccess {
 export const listManagerUsersApi = () =>
   client.get<User[]>('/manager/users')
 
-export const createManagerUserApi = (username: string, password: string, role: string) =>
-  client.post<User>('/manager/users', { username, password, role })
+export const createManagerUserApi = (data: { username: string; password: string; role: string; fullname?: string }) =>
+  client.post<User>('/manager/users', data)
 
-export const updateManagerUserApi = (userId: string, data: { role?: string; password?: string }) =>
+export const updateManagerUserApi = (userId: string, data: { role?: string; password?: string; fullname?: string }) =>
   client.put<User>(`/manager/users/${userId}`, data)
 
 export const deleteManagerUserApi = (userId: string) =>

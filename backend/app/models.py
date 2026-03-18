@@ -21,6 +21,7 @@ class User(Base):
 
     id = Column(String, primary_key=True, default=new_uuid)
     username = Column(String, unique=True, nullable=False)
+    fullname = Column(String, nullable=True)
     password_hash = Column(String, nullable=False)
     role = Column(String, nullable=False, default=ROLE_USER)
     created_at = Column(DateTime, default=utcnow)

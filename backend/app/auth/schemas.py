@@ -19,6 +19,7 @@ class RefreshRequest(BaseModel):
 class UserResponse(BaseModel):
     id: str
     username: str
+    fullname: str | None = None
     role: str
 
     model_config = {"from_attributes": True}

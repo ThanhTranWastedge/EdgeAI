@@ -4,10 +4,10 @@ import { User } from './auth'
 export const listUsersApi = (page = 1, pageSize = 50) =>
   client.get<User[]>('/admin/users', { params: { page, page_size: pageSize } })
 
-export const createUserApi = (username: string, password: string, role: string) =>
-  client.post<User>('/admin/users', { username, password, role })
+export const createUserApi = (data: { username: string; password: string; role: string; fullname?: string }) =>
+  client.post<User>('/admin/users', data)
 
-export const updateUserApi = (userId: string, data: { role?: string; password?: string }) =>
+export const updateUserApi = (userId: string, data: { role?: string; password?: string; fullname?: string }) =>
   client.put<User>(`/admin/users/${userId}`, data)
 
 export const deleteUserApi = (userId: string) =>

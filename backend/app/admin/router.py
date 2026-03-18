@@ -35,6 +35,7 @@ async def create_user(
 
     user = User(
         username=body.username,
+        fullname=body.fullname,
         password_hash=hash_password(body.password),
         role=body.role,
     )
@@ -60,6 +61,8 @@ async def update_user(
         user.role = body.role
     if body.password is not None:
         user.password_hash = hash_password(body.password)
+    if body.fullname is not None:
+        user.fullname = body.fullname
 
     await db.commit()
     await db.refresh(user)

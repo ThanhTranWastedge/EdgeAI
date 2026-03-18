@@ -5,6 +5,7 @@ import { listUsersApi, createUserApi, updateUserApi, deleteUserApi } from '../ap
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([])
   const [newUsername, setNewUsername] = useState('')
+  const [newFullname, setNewFullname] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [newRole, setNewRole] = useState('user')
 
@@ -13,8 +14,9 @@ export default function UserManagement() {
 
   const handleCreate = async () => {
     if (!newUsername || !newPassword) return
-    await createUserApi(newUsername, newPassword, newRole)
+    await createUserApi({ username: newUsername, password: newPassword, role: newRole, fullname: newFullname || undefined })
     setNewUsername('')
+    setNewFullname('')
     setNewPassword('')
     loadUsers()
   }
@@ -24,6 +26,7 @@ export default function UserManagement() {
       <h3 style={{ color: '#e0e0e0', marginBottom: 16 }}>Users</h3>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <input placeholder="Username" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} style={{ padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0' }} />
+        <input placeholder="Full Name" value={newFullname} onChange={(e) => setNewFullname(e.target.value)} style={{ padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0' }} />
         <input placeholder="Password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={{ padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0' }} />
         <select value={newRole} onChange={(e) => setNewRole(e.target.value)} style={{ padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0' }}>
           <option value="user">User</option>
@@ -36,6 +39,7 @@ export default function UserManagement() {
         <thead>
           <tr style={{ borderBottom: '1px solid #30363d' }}>
             <th style={{ textAlign: 'left', padding: 8, color: '#8b949e' }}>Username</th>
+            <th style={{ textAlign: 'left', padding: 8, color: '#8b949e' }}>Full Name</th>
             <th style={{ textAlign: 'left', padding: 8, color: '#8b949e' }}>Role</th>
             <th style={{ textAlign: 'right', padding: 8, color: '#8b949e' }}>Actions</th>
           </tr>
@@ -44,6 +48,7 @@ export default function UserManagement() {
           {users.map((u) => (
             <tr key={u.id} style={{ borderBottom: '1px solid #21262d' }}>
               <td style={{ padding: 8 }}>{u.username}</td>
+              <td style={{ padding: 8, color: '#8b949e' }}>{u.fullname || '—'}</td>
               <td style={{ padding: 8 }}>{u.role}</td>
               <td style={{ padding: 8, textAlign: 'right' }}>
                 <button onClick={async () => {

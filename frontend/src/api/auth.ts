@@ -3,6 +3,7 @@ import client from './client'
 export interface User {
   id: string
   username: string
+  fullname: string | null
   role: string
 }
 
