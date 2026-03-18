@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+data/
+.superpowers/
+node_modules/
+dist/
+.vite/
+*.egg-info/
+.pytest_cache/
