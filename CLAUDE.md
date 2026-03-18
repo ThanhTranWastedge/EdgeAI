@@ -61,9 +61,17 @@ SECRET_KEY env var is required for all backend commands. Tests use in-memory SQL
 
 Tests use `httpx.AsyncClient` with ASGI transport against in-memory SQLite. Each test creates its own users/data via `TestingSessionLocal`. Provider calls are mocked with `unittest.mock.patch("app.chat.router.get_provider")`. The `setup_db` fixture auto-creates/drops tables per test.
 
+## SSE Streaming
+
+- `sse-starlette` 2.2.1 uses `\r\n` as its default line separator. The frontend SSE parser strips trailing `\r` from lines before processing.
+- Ragflow provider sends delta chunks (diffed from cumulative content via `startswith` check). OpenAI provider sends native deltas.
+
 ## Deployment
 
 - Backend Dockerfile: Python 3.12, uvicorn on :8000
 - Frontend Dockerfile: multi-stage Node build + nginx serving static + reverse proxy to backend
 - nginx.conf: SSE-specific headers (no buffering, Connection='', 300s timeout)
 - Data volume: `./data` mounted for SQLite persistence
+- `.dockerignore` in both `backend/` and `frontend/` excludes dev-only files (tests, docs, CLAUDE.md)
+- Deploy servers use `git clone --no-checkout` + sparse-checkout to exclude `CLAUDE.md` and `docs/`
+- Full deployment guide: `docs/deployment-guide.md`

@@ -113,13 +113,15 @@ Authorization: Bearer <access_token>
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
 | `/api/chat/{integration_id}/send` | POST | User | Send message. Body: `{message, pinned_ids?, stream?}` |
-| `/api/chat/{integration_id}/sessions` | GET | User | List 10 most recent sessions |
+| `/api/chat/{integration_id}/sessions` | GET | User | List 100 most recent sessions |
 | `/api/chat/{integration_id}/sessions/{id}` | GET | User | Get session with messages |
 
 **Streaming:** When `stream: true`, the response is Server-Sent Events:
 - `data: <text>` — content chunks
 - `event: done` + `data: {"references": [...], "provider_session_id": "..."}` — completion
 - `event: error` + `data: {"detail": "..."}` — error
+
+**Note:** `sse-starlette` uses `\r\n` as its default line separator. The frontend SSE parser strips trailing `\r` from lines before processing to handle this correctly.
 
 ### Integrations
 

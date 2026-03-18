@@ -174,24 +174,19 @@ Admins can manage all roles including other admins. For day-to-day user manageme
 
 ## Deployment
 
-### Docker (Recommended)
+See `docs/deployment-guide.md` for full deployment instructions including Docker setup, backups, HTTPS, and troubleshooting.
+
+### Quick Start
 
 ```bash
-SECRET_KEY=your-random-secret ADMIN_PASSWORD=your-admin-password docker compose up -d
+git clone --no-checkout <repo-url> EdgeAI && cd EdgeAI
+git sparse-checkout init --no-cone
+git sparse-checkout set '/*' '!CLAUDE.md' '!docs/'
+git checkout
+
+cp .env.example .env
+# Edit .env — set SECRET_KEY and ADMIN_PASSWORD
+docker compose up -d
 ```
 
-The app will be available at `http://localhost:3000`.
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `SECRET_KEY` | Yes | — | Random string for JWT signing |
-| `ADMIN_PASSWORD` | Yes (first run) | — | Initial admin account password |
-| `ADMIN_USERNAME` | No | `admin` | Initial admin account username |
-
-### Stopping
-
-```bash
-docker compose down
-```
-
-Data persists in the `./data/` directory between restarts.
+The app will be available at `http://localhost:3000`. Data persists in the `./data/` directory between restarts.
