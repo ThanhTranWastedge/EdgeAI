@@ -46,9 +46,6 @@
   /* ─ Font families (Tailwind v4 uses --font-* namespace) ─ */
   --font-heading: "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-body: "Inter", "Helvetica Neue", Arial, sans-serif;
-
-  /* ─ Border radius ─ */
-  --radius-pill: 50px;
 }
 
 /* Apply base font globally */
@@ -97,7 +94,7 @@ h1, h2, h3, h4, h5, h6 {
   background: none;
   padding: 0;
 }
-.markdown-body strong { color: #0f172a; }
+.markdown-body strong { color: var(--color-amcs-black); }
 .markdown-body a { color: var(--color-amcs-primary); }
 .markdown-body blockquote {
   border-left: 3px solid var(--color-amcs-grey-200);
