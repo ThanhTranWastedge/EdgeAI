@@ -64,3 +64,17 @@ async def test_delete_user(client):
     uid = create.json()["id"]
     response = await client.delete(f"/api/admin/users/{uid}", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_admin_cannot_delete_self(client):
+    token = await admin_login(client)
+    # Get admin's own user ID
+    users = await client.get("/api/admin/users", headers={"Authorization": f"Bearer {token}"})
+    admin_user = [u for u in users.json() if u["username"] == "admin"][0]
+    response = await client.delete(
+        f"/api/admin/users/{admin_user['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Cannot delete own account"
