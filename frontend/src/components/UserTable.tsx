@@ -5,12 +5,13 @@ import { inputCls, selectCls, btnPrimaryCls, btnSecondaryCls, btnDangerCls, thCl
 interface Props {
   users: User[]
   availableRoles: string[]
+  currentUserId: string | undefined
   onCreateUser: (data: { username: string; password: string; role: string; fullname?: string }) => Promise<void>
   onToggleRole: (userId: string, currentRole: string) => Promise<void>
   onDeleteUser: (userId: string) => Promise<void>
 }
 
-export default function UserTable({ users, availableRoles, onCreateUser, onToggleRole, onDeleteUser }: Props) {
+export default function UserTable({ users, availableRoles, currentUserId, onCreateUser, onToggleRole, onDeleteUser }: Props) {
   const [newUsername, setNewUsername] = useState('')
   const [newFullname, setNewFullname] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -56,9 +57,19 @@ export default function UserTable({ users, availableRoles, onCreateUser, onToggl
                 <button onClick={() => onToggleRole(u.id, u.role)} className={btnSecondaryCls}>
                   Toggle Role
                 </button>
-                <button onClick={async () => { if (confirm('Delete user?')) await onDeleteUser(u.id) }} className={btnDangerCls}>
-                  Delete
-                </button>
+                {u.id === currentUserId ? (
+                  <button
+                    disabled
+                    title="You cannot delete your own account"
+                    className={`${btnDangerCls} opacity-50 cursor-not-allowed`}
+                  >
+                    Delete
+                  </button>
+                ) : (
+                  <button onClick={async () => { if (confirm('Delete user?')) await onDeleteUser(u.id) }} className={btnDangerCls}>
+                    Delete
+                  </button>
+                )}
               </td>
             </tr>
           ))}
