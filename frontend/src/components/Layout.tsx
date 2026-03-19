@@ -43,8 +43,9 @@ export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === 'true')
-  const isManualCollapseRef = useRef(localStorage.getItem(SIDEBAR_KEY) === 'true')
+  const initialCollapsed = localStorage.getItem(SIDEBAR_KEY) === 'true'
+  const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
+  const isManualCollapseRef = useRef(initialCollapsed)
 
   const toggleSidebar = useCallback(() => {
     setIsCollapsed((prev) => {

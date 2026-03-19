@@ -57,19 +57,14 @@ export default function UserTable({ users, availableRoles, currentUserId, onCrea
                 <button onClick={() => onToggleRole(u.id, u.role)} className={btnSecondaryCls}>
                   Toggle Role
                 </button>
-                {u.id === currentUserId ? (
-                  <button
-                    disabled
-                    title="You cannot delete your own account"
-                    className={`${btnDangerCls} opacity-50 cursor-not-allowed`}
-                  >
-                    Delete
-                  </button>
-                ) : (
-                  <button onClick={async () => { if (confirm('Delete user?')) await onDeleteUser(u.id) }} className={btnDangerCls}>
-                    Delete
-                  </button>
-                )}
+                <button
+                  disabled={u.id === currentUserId}
+                  title={u.id === currentUserId ? 'You cannot delete your own account' : undefined}
+                  onClick={u.id === currentUserId ? undefined : async () => { if (confirm('Delete user?')) await onDeleteUser(u.id) }}
+                  className={`${btnDangerCls} disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  Delete
+                </button>
               </td>
             </tr>
           ))}
