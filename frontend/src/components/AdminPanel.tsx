@@ -33,26 +33,29 @@ export default function AdminPanel() {
 
   return (
     <div>
-      <h3 style={{ color: '#e0e0e0', marginBottom: 16 }}>Integrations</h3>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} style={{ padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0' }} />
-        <select value={providerType} onChange={(e) => setProviderType(e.target.value)} style={{ padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0' }}>
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors" />
+        <select value={providerType} onChange={(e) => setProviderType(e.target.value)} className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer">
           <option value="ragflow">RAGFlow</option>
           <option value="openai_compatible">OpenAI Compatible</option>
         </select>
-        <textarea placeholder='{"base_url":"...","api_key":"..."}' value={configJson} onChange={(e) => setConfigJson(e.target.value)} rows={2} style={{ padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0', flex: 1, minWidth: 300, fontFamily: 'monospace', fontSize: 12 }} />
-        <input placeholder="Opening Greeting (optional)" value={greeting} onChange={(e) => setGreeting(e.target.value)} style={{ padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0', flex: 1, minWidth: 200 }} />
-        <button onClick={handleCreate} style={{ padding: '8px 16px', background: '#64ffda', color: '#0d1117', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Add</button>
+        <textarea placeholder='{"base_url":"...","api_key":"..."}' value={configJson} onChange={(e) => setConfigJson(e.target.value)} rows={2} className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 font-mono flex-1 min-w-[300px] transition-colors" />
+        <input placeholder="Opening Greeting (optional)" value={greeting} onChange={(e) => setGreeting(e.target.value)} className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 flex-1 min-w-[200px] transition-colors" />
+        <button onClick={handleCreate} className="px-4 py-2 rounded-lg bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 transition-colors cursor-pointer">Add</button>
       </div>
-      {integrations.map((i) => (
-        <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 12, background: '#161b22', border: '1px solid #30363d', borderRadius: 6, marginBottom: 8 }}>
-          <div>
-            <span style={{ color: '#e0e0e0' }}>{i.name}</span>
-            <span style={{ fontSize: 10, color: '#8b949e', marginLeft: 8 }}>{i.provider_type}</span>
+      <div className="space-y-2">
+        {integrations.map((i) => (
+          <div key={i.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <div>
+              <span className="text-sm text-slate-900">{i.name}</span>
+              <span className="text-xs text-slate-400 ml-2">{i.provider_type}</span>
+            </div>
+            <button onClick={async () => { if (confirm('Delete integration?')) { await deleteIntegrationApi(i.id); load() } }} className="px-3 py-1 rounded-lg text-xs text-red-500 border border-red-200 hover:bg-red-50 transition-colors cursor-pointer">
+              Delete
+            </button>
           </div>
-          <button onClick={async () => { if (confirm('Delete integration?')) { await deleteIntegrationApi(i.id); load() } }} style={{ padding: '4px 8px', background: '#21262d', border: '1px solid #cf6679', borderRadius: 4, color: '#cf6679', cursor: 'pointer', fontSize: 11 }}>Delete</button>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }
