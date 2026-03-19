@@ -1,137 +1,133 @@
 import { useAuthStore } from '../store/authStore'
 
-const sectionStyle = { marginBottom: 28 }
-const h3Style = { color: '#64ffda', marginBottom: 8, fontSize: 16 }
-const pStyle = { color: '#c9d1d9', lineHeight: 1.6, margin: '4px 0' }
-const olStyle = { color: '#c9d1d9', lineHeight: 1.8, paddingLeft: 20, margin: '4px 0' }
-const codeStyle = { background: '#21262d', padding: '2px 6px', borderRadius: 3, fontSize: 13, color: '#e0e0e0' }
-
 export default function HelpPage() {
   const user = useAuthStore((s) => s.user)
   const isManagerOrAdmin = user?.role === 'manager' || user?.role === 'admin'
 
   return (
-    <div style={{ flex: 1, padding: 32, overflowY: 'auto', maxWidth: 720 }}>
-        <h2 style={{ color: '#64ffda', marginBottom: 24 }}>Help</h2>
+    <div className="p-8 max-w-2xl">
+      <h2 className="text-lg font-semibold text-slate-900 mb-6">Help</h2>
 
-        <div style={sectionStyle}>
-          <h3 style={h3Style}>Getting Started</h3>
-          <p style={pStyle}>
+      <div className="space-y-6 text-sm">
+        <section>
+          <h3 className="text-base font-semibold text-slate-900 mb-2">Getting Started</h3>
+          <p className="text-slate-600 leading-relaxed">
             EdgeAI lets you chat with AI assistants powered by different providers.
-            Select an integration from the sidebar, type your message, and press <span style={codeStyle}>Enter</span> or click <span style={codeStyle}>Send</span>.
+            Select an integration from the sidebar, type your message, and press <code className="bg-slate-100 text-slate-800 rounded px-1.5 py-0.5 text-xs font-mono">Enter</code> or click <code className="bg-slate-100 text-slate-800 rounded px-1.5 py-0.5 text-xs font-mono">Send</code>.
           </p>
-        </div>
+        </section>
 
-        <div style={sectionStyle}>
-          <h3 style={h3Style}>Chat Page Layout</h3>
-          <ol style={olStyle}>
-            <li><strong>Left sidebar (top)</strong> — Available integrations (AI assistants you have access to)</li>
-            <li><strong>Left sidebar (bottom)</strong> — Recent session history for the selected integration</li>
-            <li><strong>Main area</strong> — Chat window with message input</li>
+        <section>
+          <h3 className="text-base font-semibold text-slate-900 mb-2">Chat Page Layout</h3>
+          <ol className="list-decimal list-inside text-slate-600 leading-loose">
+            <li><strong className="text-slate-900">Left sidebar (top)</strong> — Available integrations (AI assistants you have access to)</li>
+            <li><strong className="text-slate-900">Left sidebar (bottom)</strong> — Recent session history for the selected integration</li>
+            <li><strong className="text-slate-900">Main area</strong> — Chat window with message input</li>
           </ol>
-          <p style={pStyle}>
+          <p className="text-slate-600 leading-relaxed mt-2">
             Each message creates a new session — EdgeAI is designed for single question-and-answer interactions.
             If an integration has an opening greeting, it will appear as a welcome message when you first select it.
           </p>
-        </div>
+        </section>
 
-        <div style={sectionStyle}>
-          <h3 style={h3Style}>Viewing Past Sessions</h3>
-          <p style={pStyle}>
-            Click any session in the <strong>Recent Sessions</strong> sidebar to review both your question and the assistant's response.
+        <section>
+          <h3 className="text-base font-semibold text-slate-900 mb-2">Viewing Past Sessions</h3>
+          <p className="text-slate-600 leading-relaxed">
+            Click any session in the <strong className="text-slate-900">Recent Sessions</strong> sidebar to review both your question and the assistant's response.
           </p>
-        </div>
+        </section>
 
-        <div style={sectionStyle}>
-          <h3 style={h3Style}>Pinning Responses</h3>
-          <p style={pStyle}>
+        <section>
+          <h3 className="text-base font-semibold text-slate-900 mb-2">Pinning Responses</h3>
+          <p className="text-slate-600 leading-relaxed">
             Pinning saves useful responses so you can reuse them as context in future chats — even with different integrations.
           </p>
-          <ol style={olStyle}>
-            <li>After receiving a response, click the <strong>Pin</strong> button below the message</li>
+          <ol className="list-decimal list-inside text-slate-600 leading-loose mt-1">
+            <li>After receiving a response, click the <strong className="text-slate-900">Pin</strong> button below the message</li>
             <li>Enter a descriptive label (e.g., "Marketing strategy summary")</li>
             <li>The message is saved to your pin collection</li>
           </ol>
-        </div>
+        </section>
 
-        <div style={sectionStyle}>
-          <h3 style={h3Style}>Injecting Pins as Context</h3>
-          <ol style={olStyle}>
-            <li>Click the <strong>Pin</strong> button next to the input field to open the pin selector</li>
-            <li>Check the pins you want to inject — a yellow banner shows selected pins</li>
+        <section>
+          <h3 className="text-base font-semibold text-slate-900 mb-2">Injecting Pins as Context</h3>
+          <ol className="list-decimal list-inside text-slate-600 leading-loose">
+            <li>Click the <strong className="text-slate-900">Pin</strong> button next to the input field to open the pin selector</li>
+            <li>Check the pins you want to inject — a banner shows selected pins</li>
             <li>Type your message and send</li>
           </ol>
-          <p style={pStyle}>
+          <p className="text-slate-600 leading-relaxed mt-2">
             The pinned content is automatically prepended to your question as additional context.
             This is useful for carrying knowledge across different integrations — for example, pin a RAGFlow response and inject it into an OpenAI chat for further analysis.
           </p>
-        </div>
+        </section>
 
-        <div style={sectionStyle}>
-          <h3 style={h3Style}>Message Actions</h3>
-          <ol style={olStyle}>
-            <li><strong>Pin</strong> — Save the response for future context injection</li>
-            <li><strong>Copy</strong> — Copy the response text to your clipboard</li>
+        <section>
+          <h3 className="text-base font-semibold text-slate-900 mb-2">Message Actions</h3>
+          <ol className="list-decimal list-inside text-slate-600 leading-loose">
+            <li><strong className="text-slate-900">Pin</strong> — Save the response for future context injection</li>
+            <li><strong className="text-slate-900">Copy</strong> — Copy the response text to your clipboard</li>
           </ol>
-          <p style={pStyle}>
-            RAGFlow responses may also show <strong>References</strong> at the bottom, listing the source documents used.
+          <p className="text-slate-600 leading-relaxed mt-2">
+            RAGFlow responses may also show <strong className="text-slate-900">References</strong> at the bottom, listing the source documents used.
           </p>
-        </div>
+        </section>
 
-        <div style={sectionStyle}>
-          <h3 style={h3Style}>Settings</h3>
-          <p style={pStyle}>
-            Click <strong>Settings</strong> in the top navigation bar to access your account settings.
+        <section>
+          <h3 className="text-base font-semibold text-slate-900 mb-2">Settings</h3>
+          <p className="text-slate-600 leading-relaxed">
+            Click <strong className="text-slate-900">Settings</strong> in the sidebar to access your account settings.
           </p>
-          <ol style={olStyle}>
+          <ol className="list-decimal list-inside text-slate-600 leading-loose mt-1">
             <li>Enter your current password</li>
             <li>Enter your new password and confirm it</li>
-            <li>Click <strong>Update Password</strong></li>
+            <li>Click <strong className="text-slate-900">Update Password</strong></li>
           </ol>
-        </div>
+        </section>
 
-        <div style={sectionStyle}>
-          <h3 style={h3Style}>Integration Access</h3>
-          <p style={pStyle}>
+        <section>
+          <h3 className="text-base font-semibold text-slate-900 mb-2">Integration Access</h3>
+          <p className="text-slate-600 leading-relaxed">
             You can only see and chat with integrations that have been granted to you by a manager or admin.
             If you don't see any integrations, contact your manager to request access.
           </p>
-        </div>
+        </section>
 
         {isManagerOrAdmin && (
-          <>
-            <h2 style={{ color: '#64ffda', marginBottom: 16, marginTop: 32, borderTop: '1px solid #30363d', paddingTop: 24 }}>Manager Guide</h2>
+          <div className="border-t border-slate-200 pt-6 mt-8">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Manager Guide</h2>
 
-            <div style={sectionStyle}>
-              <h3 style={h3Style}>Managing Users</h3>
-              <ol style={olStyle}>
-                <li>Go to <strong>Manager</strong> in the top navigation bar</li>
-                <li>Under <strong>Users</strong>, enter a username, password, and select a role (User or Manager)</li>
-                <li>Click <strong>Add</strong> to create the account</li>
+            <section className="mb-6">
+              <h3 className="text-base font-semibold text-slate-900 mb-2">Managing Users</h3>
+              <ol className="list-decimal list-inside text-slate-600 leading-loose">
+                <li>Go to <strong className="text-slate-900">Manager</strong> in the sidebar</li>
+                <li>Under <strong className="text-slate-900">Users</strong>, enter a username, password, and select a role (User or Manager)</li>
+                <li>Click <strong className="text-slate-900">Add</strong> to create the account</li>
               </ol>
-              <p style={pStyle}>
-                You can also <strong>Toggle Role</strong> to switch a user between User and Manager, or <strong>Delete</strong> to remove an account.
+              <p className="text-slate-600 leading-relaxed mt-2">
+                You can also <strong className="text-slate-900">Toggle Role</strong> to switch a user between User and Manager, or <strong className="text-slate-900">Delete</strong> to remove an account.
                 Managers cannot create, edit, or delete admin accounts.
               </p>
-            </div>
+            </section>
 
-            <div style={sectionStyle}>
-              <h3 style={h3Style}>Managing Integration Access</h3>
-              <p style={pStyle}>
-                Users have <strong>no access to any integration by default</strong>. You must explicitly grant access for each user.
+            <section>
+              <h3 className="text-base font-semibold text-slate-900 mb-2">Managing Integration Access</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Users have <strong className="text-slate-900">no access to any integration by default</strong>. You must explicitly grant access for each user.
               </p>
-              <ol style={olStyle}>
-                <li>Go to <strong>Manager</strong> &gt; <strong>Integration Access</strong></li>
+              <ol className="list-decimal list-inside text-slate-600 leading-loose mt-1">
+                <li>Go to <strong className="text-slate-900">Manager</strong> &gt; <strong className="text-slate-900">Integration Access</strong></li>
                 <li>Select a user from the dropdown</li>
                 <li>Check the integrations the user should have access to</li>
-                <li>Click <strong>Save Access</strong></li>
+                <li>Click <strong className="text-slate-900">Save Access</strong></li>
               </ol>
-              <p style={pStyle}>
+              <p className="text-slate-600 leading-relaxed mt-2">
                 Users will only see integrations they have been granted access to. Managers and admins always see all integrations.
               </p>
-            </div>
-          </>
+            </section>
+          </div>
         )}
       </div>
+    </div>
   )
 }

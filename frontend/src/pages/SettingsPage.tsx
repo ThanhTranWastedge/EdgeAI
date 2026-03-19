@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { AxiosError } from 'axios'
 import { changePasswordApi } from '../api/auth'
 
-const inputStyle = { padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0', width: '100%' }
-
 export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -35,18 +33,31 @@ export default function SettingsPage() {
   }
 
   return (
-    <div style={{ flex: 1, padding: 32, overflowY: 'auto' }}>
-      <h2 style={{ color: '#64ffda', marginBottom: 24 }}>Settings</h2>
-      <div style={{ maxWidth: 400 }}>
-        <h3 style={{ color: '#e0e0e0', marginBottom: 16 }}>Change Password</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <input type="password" placeholder="Current Password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} style={inputStyle} />
-          <input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={inputStyle} />
-          <input type="password" placeholder="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={inputStyle} />
-          <button onClick={handleSubmit} style={{ padding: '8px 16px', background: '#64ffda', color: '#0d1117', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Update Password</button>
+    <div className="p-8 max-w-lg">
+      <h2 className="text-lg font-semibold text-slate-900 mb-6">Settings</h2>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+          <h3 className="text-base font-semibold text-slate-900">Change Password</h3>
         </div>
-        {message && <div style={{ marginTop: 12, color: '#64ffda', fontSize: 13 }}>{message}</div>}
-        {error && <div style={{ marginTop: 12, color: '#cf6679', fontSize: 13 }}>{error}</div>}
+        <div className="p-6 space-y-4">
+          <div>
+            <label htmlFor="current-pw" className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+            <input id="current-pw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors" />
+          </div>
+          <div>
+            <label htmlFor="new-pw" className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+            <input id="new-pw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors" />
+          </div>
+          <div>
+            <label htmlFor="confirm-pw" className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+            <input id="confirm-pw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors" />
+          </div>
+          <button onClick={handleSubmit} className="px-4 py-2 rounded-lg bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 transition-colors cursor-pointer">
+            Update Password
+          </button>
+          {message && <div className="text-green-500 text-sm">{message}</div>}
+          {error && <div className="text-red-500 text-sm">{error}</div>}
+        </div>
       </div>
     </div>
   )
