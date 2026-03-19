@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Integration, listIntegrationsApi, createIntegrationApi, deleteIntegrationApi } from '../api/integrations'
-import { inputCls, selectCls, btnPrimaryCls } from '../styles'
+import { inputCls, selectCls, btnPrimaryCls, btnDangerCls } from '../styles'
 
 export default function AdminPanel() {
   const [integrations, setIntegrations] = useState<Integration[]>([])
@@ -51,7 +51,7 @@ export default function AdminPanel() {
               <span className="text-sm text-amcs-black">{i.name}</span>
               <span className="text-xs text-amcs-grey-300 ml-2">{i.provider_type}</span>
             </div>
-            <button onClick={async () => { if (confirm('Delete integration?')) { await deleteIntegrationApi(i.id); load() } }} className="px-3 py-1 rounded-lg text-xs text-amcs-negative border border-amcs-negative/30 hover:bg-amcs-negative-light transition-colors cursor-pointer">
+            <button onClick={async () => { if (confirm('Delete integration?')) { await deleteIntegrationApi(i.id); load() } }} className={btnDangerCls}>
               Delete
             </button>
           </div>

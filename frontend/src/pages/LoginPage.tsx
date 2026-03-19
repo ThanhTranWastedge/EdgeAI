@@ -48,7 +48,7 @@ export default function LoginPage() {
       />
       <div className="absolute inset-0 bg-black/40" />
       <form onSubmit={handleSubmit} className="relative bg-white/20 backdrop-blur-md rounded-xl shadow-lg p-8 w-[400px] border border-white/30">
-        <img src="/amcs-logo.svg" alt="AMCS" className="h-8 w-auto brightness-0 invert mb-6" />
+        <img src="/amcs-logo.svg" alt="AMCS" width={97} height={34} className="h-8 w-auto brightness-0 invert mb-6" />
         {error && <div className="text-amcs-negative/70 text-sm mb-4">{error}</div>}
         <div className="space-y-4">
           <div>
@@ -75,7 +75,7 @@ export default function LoginPage() {
           </div>
           <button
             type="submit"
-            className={`w-full ${btnPrimaryCls} focus:outline-none focus:ring-2 focus:ring-amcs-primary-light/30`}
+            className={`w-full ${btnPrimaryCls}`}
           >
             Sign In
           </button>

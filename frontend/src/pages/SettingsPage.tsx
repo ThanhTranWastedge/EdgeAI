@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AxiosError } from 'axios'
 import { changePasswordApi } from '../api/auth'
 import SectionCard from '../components/SectionCard'
-import { inputCls, btnPrimaryCls } from '../styles'
+import { inputCls, btnPrimaryCls, labelCls } from '../styles'
 
 export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('')
@@ -40,15 +40,15 @@ export default function SettingsPage() {
       <SectionCard title="Change Password">
         <div className="space-y-4">
           <div>
-            <label htmlFor="current-pw" className="block text-sm font-medium text-amcs-grey-600 mb-1">Current Password</label>
+            <label htmlFor="current-pw" className={labelCls}>Current Password</label>
             <input id="current-pw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className={`w-full ${inputCls}`} />
           </div>
           <div>
-            <label htmlFor="new-pw" className="block text-sm font-medium text-amcs-grey-600 mb-1">New Password</label>
+            <label htmlFor="new-pw" className={labelCls}>New Password</label>
             <input id="new-pw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={`w-full ${inputCls}`} />
           </div>
           <div>
-            <label htmlFor="confirm-pw" className="block text-sm font-medium text-amcs-grey-600 mb-1">Confirm New Password</label>
+            <label htmlFor="confirm-pw" className={labelCls}>Confirm New Password</label>
             <input id="confirm-pw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={`w-full ${inputCls}`} />
           </div>
           <button onClick={handleSubmit} className={btnPrimaryCls}>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { X, ChevronDown } from 'lucide-react'
 import SectionCard from '../components/SectionCard'
-import { inputCls, selectCls, btnPrimaryCls } from '../styles'
+import { inputCls, selectCls, btnPrimaryCls, labelCls } from '../styles'
 
 export default function AgentConfiguration() {
   const [activeTab, setActiveTab] = useState('Configuration')
@@ -17,7 +17,7 @@ export default function AgentConfiguration() {
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2 rounded-lg bg-white text-amcs-grey-500 text-sm font-medium border border-amcs-grey-100 hover:bg-amcs-grey-50 transition-colors cursor-pointer">
+          <button className="px-4 py-2 rounded-lg bg-amcs-white text-amcs-grey-500 text-sm font-medium border border-amcs-grey-100 hover:bg-amcs-grey-50 transition-colors cursor-pointer">
             Discard Changes
           </button>
           <button className={btnPrimaryCls}>
@@ -34,7 +34,7 @@ export default function AgentConfiguration() {
             onClick={() => setActiveTab(tab)}
             className={`px-6 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer
               ${activeTab === tab
-                ? 'bg-white text-amcs-black shadow-sm'
+                ? 'bg-amcs-white text-amcs-black shadow-sm'
                 : 'text-amcs-grey-400 hover:text-amcs-grey-600'
               }`}
           >
@@ -49,11 +49,11 @@ export default function AgentConfiguration() {
           <SectionCard title="General Settings" description="Basic identification and fallback behavior for this agent.">
             <div className="space-y-4">
               <div>
-                <label htmlFor="agent-name" className="block text-sm font-medium text-amcs-grey-600 mb-1">Agent Name</label>
+                <label htmlFor="agent-name" className={labelCls}>Agent Name</label>
                 <input id="agent-name" type="text" defaultValue="Marketing Agent" className={`w-full ${inputCls}`} />
               </div>
               <div>
-                <label htmlFor="empty-response" className="block text-sm font-medium text-amcs-grey-600 mb-1">Empty Response Message</label>
+                <label htmlFor="empty-response" className={labelCls}>Empty Response Message</label>
                 <input id="empty-response" type="text" defaultValue="I don't know" className={`w-full ${inputCls}`} />
                 <p className="text-xs text-amcs-grey-300 mt-1">This message will be sent when the agent cannot find a relevant answer.</p>
               </div>
@@ -63,13 +63,13 @@ export default function AgentConfiguration() {
           <SectionCard title="Retrieval & Model" description="Configure which data this agent can access and its reasoning engine.">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-amcs-grey-600 mb-1">Connected Datasets</label>
+                <label className={labelCls}>Connected Datasets</label>
                 <div className="min-h-[46px] p-2 rounded-lg border border-amcs-grey-100 bg-amcs-grey-50 flex flex-wrap gap-2 items-center focus-within:ring-2 focus-within:ring-amcs-primary-light/30 focus-within:border-amcs-primary transition-all">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-amcs-grey-600 text-sm border border-amcs-grey-100">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amcs-white text-amcs-grey-600 text-sm border border-amcs-grey-100">
                     Marketing Playbooks
                     <button className="text-amcs-grey-300 hover:text-amcs-grey-500 cursor-pointer"><X className="w-3.5 h-3.5" /></button>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-amcs-grey-600 text-sm border border-amcs-grey-100">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amcs-white text-amcs-grey-600 text-sm border border-amcs-grey-100">
                     Q3 Campaign Results
                     <button className="text-amcs-grey-300 hover:text-amcs-grey-500 cursor-pointer"><X className="w-3.5 h-3.5" /></button>
                   </span>
@@ -82,7 +82,7 @@ export default function AgentConfiguration() {
                 <p className="text-xs text-amcs-grey-300 mt-1">The agent will only use information found within these datasets.</p>
               </div>
               <div>
-                <label htmlFor="llm-select" className="block text-sm font-medium text-amcs-grey-600 mb-1">Language Model (LLM)</label>
+                <label htmlFor="llm-select" className={labelCls}>Language Model (LLM)</label>
                 <div className="relative">
                   <select id="llm-select" defaultValue="gpt-4o" className={`w-full appearance-none ${selectCls}`}>
                     <option value="gpt-4o">GPT-4o (OpenAI)</option>
@@ -103,7 +103,7 @@ export default function AgentConfiguration() {
 
       {/* Placeholder for other tabs */}
       {activeTab !== 'Configuration' && (
-        <div className="h-64 flex bg-white border border-dashed border-amcs-grey-200 rounded-xl items-center justify-center">
+        <div className="h-64 flex bg-amcs-white border border-dashed border-amcs-grey-200 rounded-xl items-center justify-center">
           <p className="text-amcs-grey-300 text-sm">Content for {activeTab} panel</p>
         </div>
       )}

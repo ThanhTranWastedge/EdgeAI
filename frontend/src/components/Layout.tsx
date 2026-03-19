@@ -87,6 +87,8 @@ export default function Layout() {
             <img
               src="/amcs-logo.svg"
               alt="AMCS"
+              width={97}
+              height={34}
               className="h-7 w-auto cursor-pointer"
               onClick={() => navigate('/chat')}
             />

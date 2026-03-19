@@ -16,7 +16,7 @@ export default function PinSelector({ onClose }: Props) {
   }, [])
 
   return (
-    <div className="mt-2 bg-white border border-amcs-grey-100 rounded-lg p-3 max-h-[200px] overflow-y-auto shadow-sm">
+    <div className="mt-2 bg-amcs-white border border-amcs-grey-100 rounded-lg p-3 max-h-[200px] overflow-y-auto shadow-sm">
       <div className="flex justify-between mb-2">
         <span className="text-xs text-amcs-grey-400">Select pinned responses to inject:</span>
         <span onClick={onClose} className="cursor-pointer text-xs text-amcs-grey-300 hover:text-amcs-grey-500 transition-colors">

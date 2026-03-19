@@ -17,7 +17,7 @@ export default function MessageBubble({ message, onPin }: Props) {
         className={`rounded-xl px-4 py-3 max-w-[70%] text-sm leading-relaxed
           ${isUser
             ? 'bg-amcs-primary/10 text-amcs-black rounded-br-sm'
-            : 'bg-white border border-amcs-grey-100 text-amcs-black rounded-bl-sm'
+            : 'bg-amcs-white border border-amcs-grey-100 text-amcs-black rounded-bl-sm'
           }`}
       >
         {isUser ? (
@@ -32,13 +32,13 @@ export default function MessageBubble({ message, onPin }: Props) {
             {onPin && !message.pinned && (
               <button
                 onClick={() => onPin(message.id)}
-                className="text-xs px-2 py-1 rounded bg-purple-50 text-purple-600 border border-purple-100 hover:bg-purple-100 transition-colors cursor-pointer"
+                className="text-xs px-2 py-1 rounded bg-amcs-primary/10 text-amcs-primary border border-amcs-primary/20 hover:bg-amcs-primary/20 transition-colors cursor-pointer"
               >
                 Pin
               </button>
             )}
             {message.pinned && (
-              <span className="text-xs text-purple-500">Pinned</span>
+              <span className="text-xs text-amcs-primary">Pinned</span>
             )}
             <button
               onClick={() => navigator.clipboard.writeText(message.content)}

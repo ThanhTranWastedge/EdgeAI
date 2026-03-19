@@ -5,7 +5,7 @@ import ChatWindow from '../components/ChatWindow'
 export default function ChatPage() {
   return (
     <div className="flex h-full">
-      <div className="w-56 flex flex-col border-r border-amcs-grey-100 bg-white">
+      <div className="w-56 flex flex-col border-r border-amcs-grey-100 bg-amcs-white">
         <IntegrationList />
         <SessionHistory />
       </div>

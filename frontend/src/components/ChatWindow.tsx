@@ -96,7 +96,7 @@ export default function ChatWindow() {
   return (
     <div className="flex-1 min-w-0 flex flex-col">
       {/* Header */}
-      <div className="h-14 px-6 flex items-center justify-between border-b border-amcs-grey-100 bg-white">
+      <div className="h-14 px-6 flex items-center justify-between border-b border-amcs-grey-100 bg-amcs-white">
         <span className="text-sm font-medium text-amcs-black">
           {activeIntegration.icon || '\uD83D\uDCAC'} {activeIntegration.name}
         </span>
@@ -108,7 +108,7 @@ export default function ChatWindow() {
         <PinnedBanner pins={selectedPins} onRemove={removeSelectedPin} />
         {currentMessages.length === 0 && activeIntegration.opening_greeting && (
           <div className="flex justify-start mb-4">
-            <div className="bg-white border border-amcs-grey-100 rounded-xl rounded-bl-sm px-4 py-3 max-w-[70%] text-sm leading-relaxed text-amcs-black markdown-body">
+            <div className="bg-amcs-white border border-amcs-grey-100 rounded-xl rounded-bl-sm px-4 py-3 max-w-[70%] text-sm leading-relaxed text-amcs-black markdown-body">
               {greetingNode}
             </div>
           </div>
@@ -122,7 +122,7 @@ export default function ChatWindow() {
       </div>
 
       {/* Input */}
-      <div className="px-6 py-3 border-t border-amcs-grey-100 bg-white">
+      <div className="px-6 py-3 border-t border-amcs-grey-100 bg-amcs-white">
         <div className="flex gap-2 items-end">
           <button
             onClick={() => setShowPinSelector(!showPinSelector)}
