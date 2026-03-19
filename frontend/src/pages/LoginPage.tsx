@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { btnPrimaryCls } from '../styles'
 
-const glassInputCls = 'w-full px-3 py-2 rounded-lg text-sm bg-white/20 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30'
+const glassInputCls = 'w-full px-3 py-2 rounded-md text-sm bg-white/20 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-amcs-primary-light/40'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -48,8 +48,8 @@ export default function LoginPage() {
       />
       <div className="absolute inset-0 bg-black/40" />
       <form onSubmit={handleSubmit} className="relative bg-white/20 backdrop-blur-md rounded-xl shadow-lg p-8 w-[400px] border border-white/30">
-        <h1 className="text-2xl font-bold text-white mb-6">EdgeAI</h1>
-        {error && <div className="text-red-300 text-sm mb-4">{error}</div>}
+        <img src="/amcs-logo.svg" alt="AMCS" className="h-8 w-auto brightness-0 invert mb-6" />
+        {error && <div className="text-amcs-negative/70 text-sm mb-4">{error}</div>}
         <div className="space-y-4">
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-white mb-1">Username</label>
@@ -75,7 +75,7 @@ export default function LoginPage() {
           </div>
           <button
             type="submit"
-            className={`w-full ${btnPrimaryCls} focus:outline-none focus:ring-2 focus:ring-sky-500/20`}
+            className={`w-full ${btnPrimaryCls} focus:outline-none focus:ring-2 focus:ring-amcs-primary-light/30`}
           >
             Sign In
           </button>
