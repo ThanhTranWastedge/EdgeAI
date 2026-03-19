@@ -1,35 +1,72 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import { MessageSquare, Bot, Users, Shield, HelpCircle, Settings, LogOut } from 'lucide-react'
+import { MessageSquare, Users, Shield, HelpCircle, Settings, LogOut, ChevronLeft, ChevronRight } from 'lucide-react'
+
+const SIDEBAR_KEY = 'sidebar-collapsed'
+const BREAKPOINT = 768
 
 interface NavItemProps {
   icon: React.ReactNode
   label: string
   active: boolean
+  collapsed: boolean
   onClick: () => void
 }
 
-function NavItem({ icon, label, active, onClick }: NavItemProps) {
+function NavItem({ icon, label, active, collapsed, onClick }: NavItemProps) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer
+      title={collapsed ? label : undefined}
+      className={`w-full flex items-center ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer
         ${active
           ? 'bg-sky-50 text-sky-600 font-semibold'
           : 'text-slate-600 hover:bg-slate-100'
         }`}
     >
       {icon}
-      {label}
+      {!collapsed && label}
     </button>
   )
+}
+
+function getInitials(fullname: string | undefined, username: string | undefined): string {
+  const name = fullname || username || ''
+  const parts = name.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return name.slice(0, 2).toUpperCase()
 }
 
 export default function Layout() {
   const { user, logout, checkAuth } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
+
+  const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === 'true')
+  const isManualCollapseRef = useRef(localStorage.getItem(SIDEBAR_KEY) === 'true')
+
+  const toggleSidebar = useCallback(() => {
+    setIsCollapsed((prev) => {
+      const next = !prev
+      localStorage.setItem(SIDEBAR_KEY, String(next))
+      isManualCollapseRef.current = next
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < BREAKPOINT) {
+        setIsCollapsed(true)
+      } else if (!isManualCollapseRef.current) {
+        setIsCollapsed(false)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    handleResize() // check on mount
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     checkAuth()
@@ -42,30 +79,34 @@ export default function Layout() {
   return (
     <div className="flex h-screen bg-slate-50">
       {/* Sidebar */}
-      <aside className="w-60 flex flex-col bg-slate-50 border-r border-slate-200">
-        {/* Logo */}
-        <div className="h-16 px-6 flex items-center">
-          <span
-            className="text-xl font-bold text-sky-500 cursor-pointer"
-            onClick={() => navigate('/chat')}
+      <aside className={`${isCollapsed ? 'w-16' : 'w-60'} flex flex-col bg-slate-50 border-r border-slate-200 transition-all duration-300 overflow-hidden`}>
+        {/* Logo + toggle */}
+        <div className={`h-16 flex items-center ${isCollapsed ? 'justify-center' : 'px-6 justify-between'}`}>
+          {!isCollapsed && (
+            <span
+              className="text-xl font-bold text-sky-500 cursor-pointer"
+              onClick={() => navigate('/chat')}
+            >
+              EdgeAI
+            </span>
+          )}
+          <button
+            onClick={toggleSidebar}
+            className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            EdgeAI
-          </span>
+            {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+          </button>
         </div>
 
         {/* Main nav */}
-        <nav className="flex-1 px-3 space-y-1">
+        <nav className={`flex-1 ${isCollapsed ? 'px-1' : 'px-3'} space-y-1`}>
           <NavItem
             icon={<MessageSquare className="w-5 h-5" />}
             label="Chat"
             active={isActive('/chat')}
+            collapsed={isCollapsed}
             onClick={() => navigate('/chat')}
-          />
-          <NavItem
-            icon={<Bot className="w-5 h-5" />}
-            label="Agents"
-            active={isActive('/agents')}
-            onClick={() => navigate('/agents')}
           />
 
           {/* Role-gated items */}
@@ -75,6 +116,7 @@ export default function Layout() {
                 icon={<Users className="w-5 h-5" />}
                 label="Manager"
                 active={isActive('/manager')}
+                collapsed={isCollapsed}
                 onClick={() => navigate('/manager')}
               />
               {isAdmin && (
@@ -82,6 +124,7 @@ export default function Layout() {
                   icon={<Shield className="w-5 h-5" />}
                   label="Admin"
                   active={isActive('/admin')}
+                  collapsed={isCollapsed}
                   onClick={() => navigate('/admin')}
                 />
               )}
@@ -90,39 +133,59 @@ export default function Layout() {
         </nav>
 
         {/* Bottom section */}
-        <div className="px-3 pb-4 space-y-1">
+        <div className={`${isCollapsed ? 'px-1' : 'px-3'} pb-4 space-y-1`}>
           <div className="border-t border-slate-200 pt-3 mb-1" />
           <NavItem
             icon={<HelpCircle className="w-5 h-5" />}
             label="Help"
             active={isActive('/help')}
+            collapsed={isCollapsed}
             onClick={() => navigate('/help')}
           />
           <NavItem
             icon={<Settings className="w-5 h-5" />}
             label="Settings"
             active={isActive('/settings')}
+            collapsed={isCollapsed}
             onClick={() => navigate('/settings')}
           />
 
           {/* User info + logout */}
-          <div className="border-t border-slate-200 mt-3 pt-3 px-4">
-            <div className="text-sm font-medium text-slate-900">
-              {user?.fullname || user?.username}
-            </div>
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-xs bg-slate-200 text-slate-600 rounded-full px-2 py-0.5">
-                {user?.role}
-              </span>
+          {isCollapsed ? (
+            <div className="border-t border-slate-200 mt-3 pt-3 flex flex-col items-center gap-2">
+              <div
+                className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600"
+                title={user?.fullname || user?.username}
+              >
+                {getInitials(user?.fullname ?? undefined, user?.username ?? undefined)}
+              </div>
               <button
                 onClick={logout}
-                className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+                title="Logout"
               >
-                <LogOut className="w-3.5 h-3.5" />
-                Logout
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
-          </div>
+          ) : (
+            <div className="border-t border-slate-200 mt-3 pt-3 px-4">
+              <div className="text-sm font-medium text-slate-900">
+                {user?.fullname || user?.username}
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-xs bg-slate-200 text-slate-600 rounded-full px-2 py-0.5">
+                  {user?.role}
+                </span>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </aside>
 
