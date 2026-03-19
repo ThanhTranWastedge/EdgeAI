@@ -10,12 +10,24 @@ Navigate to the app URL (default: `http://localhost:3000`) and sign in with the 
 
 After login, you'll land on the **Chat** page.
 
+### Navigation Sidebar
+
+The app has a collapsible sidebar on the left with navigation links:
+
+- **Chat** — the main chat interface
+- **Manager** (manager/admin only) — user and access management
+- **Admin** (admin only) — integration and user management
+- **Help** — documentation and guides
+- **Settings** — password change
+
+Click the chevron at the top of the sidebar to collapse or expand it. Your preference is remembered between sessions. On small screens (<768px), the sidebar collapses automatically.
+
 ### Chat Page Layout
 
 The chat page has three areas:
 
-- **Left sidebar (top):** Available integrations — each represents a configured AI assistant
-- **Left sidebar (bottom):** Recent session history for the selected integration
+- **Left panel (top):** Available integrations — each represents a configured AI assistant
+- **Left panel (bottom):** Recent session history for the selected integration
 - **Main area:** Chat window with message input
 
 ## Chatting
@@ -71,7 +83,7 @@ RAGFlow responses may also show **References** at the bottom, listing the source
 
 ## Settings
 
-Click the **Settings** button in the top navigation bar to access your account settings.
+Click **Settings** in the sidebar to access your account settings.
 
 ### Changing Your Password
 
@@ -82,7 +94,7 @@ Click the **Settings** button in the top navigation bar to access your account s
 
 ## Manager Features
 
-If your account has the **manager** role, you'll see a **Manager** button in the top navigation bar. Managers can create and manage user accounts and control which integrations each user can access.
+If your account has the **manager** role, you'll see a **Manager** link in the sidebar. Managers can create and manage user accounts and control which integrations each user can access.
 
 ### Managing Users
 
@@ -91,7 +103,7 @@ If your account has the **manager** role, you'll see a **Manager** button in the
 3. To toggle a user's role between User and Manager: click **Toggle Role**
 4. To remove a user: click **Delete**
 
-Managers cannot create, edit, or delete admin accounts, and cannot change their own role.
+Managers cannot create, edit, or delete admin accounts, cannot change their own role, and cannot delete their own account.
 
 ### Managing Integration Access
 
@@ -106,7 +118,7 @@ Users will only see and be able to chat with integrations they've been granted a
 
 ## Admin Features
 
-If your account has admin privileges, you'll see both **Manager** and **Admin** buttons in the top navigation bar. Admins have all manager capabilities plus the ability to manage integrations and all user roles.
+If your account has admin privileges, you'll see both **Manager** and **Admin** links in the sidebar. Admins have all manager capabilities plus the ability to manage integrations and all user roles.
 
 ### Managing Integrations
 

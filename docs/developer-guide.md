@@ -6,7 +6,7 @@ EdgeAI is a chat gateway with a FastAPI async backend, React frontend, and SQLit
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Frontend (React + TypeScript + Vite)               │
+│  Frontend (React 19 + TypeScript + Vite)             │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐  │
 │  │ AuthStore│  │ ChatStore│  │ PinStore         │  │
 │  └────┬─────┘  └────┬─────┘  └────────┬─────────┘  │
@@ -165,7 +165,7 @@ Duplicate pin per user+message returns `409 Conflict`.
 | `/api/manager/users/{id}/access` | GET | Manager/Admin | List user's integration access |
 | `/api/manager/users/{id}/access` | PUT | Manager/Admin | Replace user's integration access `{integration_ids: [str]}` |
 
-**Guard rails:** Managers cannot create/edit/delete admin accounts, change their own role, or delete themselves.
+**Guard rails:** Managers cannot create/edit/delete admin accounts, change their own role, or delete themselves. Admins also cannot delete their own account.
 
 ## Database Schema
 
@@ -173,7 +173,7 @@ All primary keys are UUID strings. Timestamps are UTC.
 
 ```
 users
-  id, username (unique), password_hash, role, created_at, last_login
+  id, username (unique), fullname, password_hash, role, created_at, last_login
 
 integrations
   id, name, provider_type, provider_config (JSON), description, icon,
@@ -306,6 +306,8 @@ Create users with `role="admin"`, `role="manager"`, or `role="user"` to test end
 - **Async everywhere**: all DB operations use `async/await`. Sync libraries (like ragflow-sdk) are wrapped in `asyncio.to_thread()`
 - **Token constants**: frontend uses `TOKEN_KEY`/`REFRESH_TOKEN_KEY` from `api/client.ts`, not raw `'access_token'` strings
 - **Integration API consolidation**: all integration CRUD lives in `api/integrations.ts`, not split across files
+- **Collapsible sidebar**: `Layout.tsx` sidebar with localStorage persistence and responsive auto-collapse (<768px)
+- **Shared style constants**: `styles.ts` exports reusable Tailwind class strings (`inputCls`, `selectCls`, `btnPrimaryCls`, etc.)
 
 ## Environment Variables
 
