@@ -8,6 +8,8 @@ services:
       - DATABASE_URL=sqlite+aiosqlite:////app/data/edgeai.db
     volumes:
       - ./data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     expose:
       - "8000"
 
