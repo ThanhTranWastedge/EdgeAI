@@ -41,7 +41,7 @@ export default function AdminPanel() {
           <option value="openai_compatible">OpenAI Compatible</option>
         </select>
         <textarea placeholder='{"base_url":"...","api_key":"..."}' value={configJson} onChange={(e) => setConfigJson(e.target.value)} rows={2} className={`${inputCls} font-mono flex-1 min-w-[300px]`} />
-        <input placeholder="Opening Greeting (optional)" value={greeting} onChange={(e) => setGreeting(e.target.value)} className={`${inputCls} flex-1 min-w-[200px]`} />
+        <textarea placeholder="Opening Greeting (optional, supports Markdown)" value={greeting} onChange={(e) => setGreeting(e.target.value)} rows={3} className={`${inputCls} flex-1 min-w-[200px]`} />
         <button onClick={handleCreate} className={btnPrimaryCls}>Add</button>
       </div>
       <div className="space-y-2">
