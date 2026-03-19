@@ -21,27 +21,40 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#0d1117' }}>
-      <form onSubmit={handleSubmit} style={{ background: '#161b22', padding: 32, borderRadius: 8, border: '1px solid #30363d', width: 360 }}>
-        <h1 style={{ color: '#64ffda', marginBottom: 24, fontSize: 24 }}>EdgeAI</h1>
-        {error && <div style={{ color: '#cf6679', marginBottom: 12, fontSize: 14 }}>{error}</div>}
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          style={{ width: '100%', padding: 10, marginBottom: 12, background: '#0d1117', border: '1px solid #30363d', borderRadius: 6, color: '#e0e0e0', boxSizing: 'border-box' }}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ width: '100%', padding: 10, marginBottom: 16, background: '#0d1117', border: '1px solid #30363d', borderRadius: 6, color: '#e0e0e0', boxSizing: 'border-box' }}
-        />
-        <button type="submit" style={{ width: '100%', padding: 10, background: '#64ffda', color: '#0d1117', border: 'none', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer' }}>
-          Sign In
-        </button>
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-8 w-[400px]">
+        <h1 className="text-2xl font-bold text-sky-500 mb-6">EdgeAI</h1>
+        {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors"
+            />
+          </div>
+          <button
+            type="submit"
+            className="w-full px-4 py-2 rounded-lg bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500/20 cursor-pointer"
+          >
+            Sign In
+          </button>
+        </div>
       </form>
     </div>
   )
