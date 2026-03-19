@@ -1,5 +1,69 @@
 @import "tailwindcss";
 
+/* ── AMCS Brand: Font ─────────────────────────────────────── */
+
+/*
+ * If you have a Faktum web licence, uncomment the @font-face
+ * block below and place .woff2 files in public/fonts/.
+ *
+ * @font-face {
+ *   font-family: "Faktum";
+ *   src: url("/fonts/Faktum-Medium.woff2") format("woff2");
+ *   font-weight: 500;
+ *   font-display: swap;
+ * }
+ * @font-face {
+ *   font-family: "Faktum";
+ *   src: url("/fonts/Faktum-Bold.woff2") format("woff2");
+ *   font-weight: 700;
+ *   font-display: swap;
+ * }
+ */
+
+/* ── AMCS Brand: Theme Tokens ─────────────────────────────── */
+
+@theme {
+  /* ─ Colors ─ */
+  --color-amcs-primary: #dc3b75;
+  --color-amcs-primary-hover: #e36291;
+  --color-amcs-primary-light: #ed9dba;
+  --color-amcs-black: #131619;
+  --color-amcs-white: #ffffff;
+
+  --color-amcs-grey-50: #f5f5f5;
+  --color-amcs-grey-100: #ededed;
+  --color-amcs-grey-200: #e6e7e7;
+  --color-amcs-grey-300: #acacac;
+  --color-amcs-grey-400: #848484;
+  --color-amcs-grey-500: #484b4c;
+  --color-amcs-grey-600: #2c2c2c;
+
+  --color-amcs-positive: #0a8200;
+  --color-amcs-positive-light: #eaf4e8;
+  --color-amcs-negative: #f97315;
+  --color-amcs-negative-light: #fff7ed;
+
+  /* ─ Font families (Tailwind v4 uses --font-* namespace) ─ */
+  --font-heading: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", "Helvetica Neue", Arial, sans-serif;
+
+  /* ─ Border radius ─ */
+  --radius-pill: 50px;
+}
+
+/* Apply base font globally */
+body {
+  font-family: var(--font-body);
+  color: var(--color-amcs-black);
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  line-height: 1.125;
+  letter-spacing: -0.025em;
+}
+
 .markdown-body h1, .markdown-body h2, .markdown-body h3,
 .markdown-body h4, .markdown-body h5, .markdown-body h6 {
   margin-top: 12px;
