@@ -84,14 +84,13 @@ export default function Layout() {
         {/* Logo + toggle */}
         <div className={`h-16 flex items-center shrink-0 ${isCollapsed ? 'justify-center' : 'px-5 justify-between'}`}>
           {!isCollapsed && (
-            <img
-              src="/amcs-logo.svg"
-              alt="AMCS"
-              width={97}
-              height={34}
-              className="h-7 w-auto cursor-pointer"
+            <div
+              className="flex items-center gap-2 cursor-pointer"
               onClick={() => navigate('/chat')}
-            />
+            >
+              <img src="/logo.png" alt="" width={32} height={32} className="h-8 w-8 rounded-lg object-cover" />
+              <span className="text-lg font-bold text-amcs-black">EdgeAI</span>
+            </div>
           )}
           <button
             onClick={toggleSidebar}
