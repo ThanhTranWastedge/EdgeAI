@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { AxiosError } from 'axios'
-import Layout from '../components/Layout'
 import { changePasswordApi } from '../api/auth'
 
 const inputStyle = { padding: 8, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0', width: '100%' }
@@ -36,21 +35,19 @@ export default function SettingsPage() {
   }
 
   return (
-    <Layout>
-      <div style={{ flex: 1, padding: 32, overflowY: 'auto' }}>
-        <h2 style={{ color: '#64ffda', marginBottom: 24 }}>Settings</h2>
-        <div style={{ maxWidth: 400 }}>
-          <h3 style={{ color: '#e0e0e0', marginBottom: 16 }}>Change Password</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <input type="password" placeholder="Current Password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} style={inputStyle} />
-            <input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={inputStyle} />
-            <input type="password" placeholder="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={inputStyle} />
-            <button onClick={handleSubmit} style={{ padding: '8px 16px', background: '#64ffda', color: '#0d1117', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Update Password</button>
-          </div>
-          {message && <div style={{ marginTop: 12, color: '#64ffda', fontSize: 13 }}>{message}</div>}
-          {error && <div style={{ marginTop: 12, color: '#cf6679', fontSize: 13 }}>{error}</div>}
+    <div style={{ flex: 1, padding: 32, overflowY: 'auto' }}>
+      <h2 style={{ color: '#64ffda', marginBottom: 24 }}>Settings</h2>
+      <div style={{ maxWidth: 400 }}>
+        <h3 style={{ color: '#e0e0e0', marginBottom: 16 }}>Change Password</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <input type="password" placeholder="Current Password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} style={inputStyle} />
+          <input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={inputStyle} />
+          <input type="password" placeholder="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={inputStyle} />
+          <button onClick={handleSubmit} style={{ padding: '8px 16px', background: '#64ffda', color: '#0d1117', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Update Password</button>
         </div>
+        {message && <div style={{ marginTop: 12, color: '#64ffda', fontSize: 13 }}>{message}</div>}
+        {error && <div style={{ marginTop: 12, color: '#cf6679', fontSize: 13 }}>{error}</div>}
       </div>
-    </Layout>
+    </div>
   )
 }

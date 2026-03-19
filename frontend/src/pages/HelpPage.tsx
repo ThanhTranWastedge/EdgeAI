@@ -1,4 +1,3 @@
-import Layout from '../components/Layout'
 import { useAuthStore } from '../store/authStore'
 
 const sectionStyle = { marginBottom: 28 }
@@ -12,8 +11,7 @@ export default function HelpPage() {
   const isManagerOrAdmin = user?.role === 'manager' || user?.role === 'admin'
 
   return (
-    <Layout>
-      <div style={{ flex: 1, padding: 32, overflowY: 'auto', maxWidth: 720 }}>
+    <div style={{ flex: 1, padding: 32, overflowY: 'auto', maxWidth: 720 }}>
         <h2 style={{ color: '#64ffda', marginBottom: 24 }}>Help</h2>
 
         <div style={sectionStyle}>
@@ -135,6 +133,5 @@ export default function HelpPage() {
           </>
         )}
       </div>
-    </Layout>
   )
 }
