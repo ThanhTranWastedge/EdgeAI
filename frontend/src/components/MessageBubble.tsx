@@ -16,8 +16,8 @@ export default function MessageBubble({ message, onPin }: Props) {
       <div
         className={`rounded-xl px-4 py-3 max-w-[70%] text-sm leading-relaxed
           ${isUser
-            ? 'bg-sky-50 text-slate-900 rounded-br-sm'
-            : 'bg-white border border-slate-200 text-slate-900 rounded-bl-sm'
+            ? 'bg-amcs-primary/10 text-amcs-black rounded-br-sm'
+            : 'bg-white border border-amcs-grey-100 text-amcs-black rounded-bl-sm'
           }`}
       >
         {isUser ? (
@@ -28,7 +28,7 @@ export default function MessageBubble({ message, onPin }: Props) {
           </div>
         )}
         {!isUser && (
-          <div className="mt-2 pt-2 border-t border-slate-100 flex gap-2">
+          <div className="mt-2 pt-2 border-t border-amcs-grey-100 flex gap-2">
             {onPin && !message.pinned && (
               <button
                 onClick={() => onPin(message.id)}
@@ -42,14 +42,14 @@ export default function MessageBubble({ message, onPin }: Props) {
             )}
             <button
               onClick={() => navigator.clipboard.writeText(message.content)}
-              className="text-xs px-2 py-1 rounded bg-sky-50 text-sky-600 border border-sky-100 hover:bg-sky-100 transition-colors cursor-pointer"
+              className="text-xs px-2 py-1 rounded bg-amcs-primary/10 text-amcs-primary border border-amcs-primary/20 hover:bg-amcs-grey-100 transition-colors cursor-pointer"
             >
               Copy
             </button>
           </div>
         )}
         {refs && refs.length > 0 && (
-          <div className="mt-2 text-[10px] text-slate-400">
+          <div className="mt-2 text-[10px] text-amcs-grey-300">
             References: {refs.map((r: { document_name: string }) => r.document_name).join(', ')}
           </div>
         )}

@@ -15,7 +15,7 @@ export default function AdminPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <h2 className="text-lg font-semibold text-slate-900">Admin Panel</h2>
+      <h2 className="text-lg font-semibold text-amcs-black">Admin Panel</h2>
       <SectionCard title="Integrations">
         <AdminPanel />
       </SectionCard>

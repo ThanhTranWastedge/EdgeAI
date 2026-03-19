@@ -24,7 +24,7 @@ export default function ManagerPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <h2 className="text-lg font-semibold text-slate-900">Manager Panel</h2>
+      <h2 className="text-lg font-semibold text-amcs-black">Manager Panel</h2>
       <SectionCard title="Users">
         <ManagerPanel users={users} onUsersChange={loadUsers} />
       </SectionCard>

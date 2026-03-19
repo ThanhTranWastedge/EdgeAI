@@ -60,17 +60,17 @@ export default function UserAccessEditor({ users }: Props) {
       {selectedUserId && (
         <>
           <div className="mb-3 space-y-1">
-            {integrations.length === 0 && <div className="text-sm text-slate-400">No integrations available</div>}
+            {integrations.length === 0 && <div className="text-sm text-amcs-grey-300">No integrations available</div>}
             {integrations.map((i) => (
               <label key={i.id} className="flex items-center gap-2 py-1 cursor-pointer text-sm">
                 <input
                   type="checkbox"
                   checked={grantedIds.has(i.id)}
                   onChange={() => toggleIntegration(i.id)}
-                  className="rounded border-slate-300 text-sky-500 focus:ring-sky-500/20"
+                  className="rounded border-amcs-grey-200 text-amcs-primary focus:ring-amcs-primary/20"
                 />
-                <span className="text-slate-900">{i.name}</span>
-                <span className="text-xs text-slate-400">({i.provider_type})</span>
+                <span className="text-amcs-black">{i.name}</span>
+                <span className="text-xs text-amcs-grey-300">({i.provider_type})</span>
               </label>
             ))}
           </div>

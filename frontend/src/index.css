@@ -68,7 +68,7 @@ h1, h2, h3, h4, h5, h6 {
 .markdown-body h4, .markdown-body h5, .markdown-body h6 {
   margin-top: 12px;
   margin-bottom: 6px;
-  color: #0f172a;
+  color: var(--color-amcs-black);
 }
 .markdown-body h1 { font-size: 1.4em; }
 .markdown-body h2 { font-size: 1.25em; }
@@ -80,14 +80,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 .markdown-body li { margin: 3px 0; }
 .markdown-body code {
-  background: #f1f5f9;
+  background: var(--color-amcs-grey-50);
   padding: 2px 5px;
   border-radius: 3px;
   font-size: 0.9em;
 }
 .markdown-body pre {
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background: var(--color-amcs-grey-50);
+  border: 1px solid var(--color-amcs-grey-200);
   border-radius: 6px;
   padding: 10px;
   margin: 8px 0;
@@ -98,12 +98,12 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0;
 }
 .markdown-body strong { color: #0f172a; }
-.markdown-body a { color: #0284c7; }
+.markdown-body a { color: var(--color-amcs-primary); }
 .markdown-body blockquote {
-  border-left: 3px solid #e2e8f0;
+  border-left: 3px solid var(--color-amcs-grey-200);
   padding-left: 10px;
   margin: 6px 0;
-  color: #64748b;
+  color: var(--color-amcs-grey-400);
 }
 .markdown-body table {
   border-collapse: collapse;
@@ -111,16 +111,16 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
 }
 .markdown-body th, .markdown-body td {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-amcs-grey-200);
   padding: 6px 10px;
   text-align: left;
 }
 .markdown-body th {
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--color-amcs-grey-50);
+  color: var(--color-amcs-black);
 }
 .markdown-body hr {
   border: none;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--color-amcs-grey-200);
   margin: 10px 0;
 }

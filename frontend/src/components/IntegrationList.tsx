@@ -12,7 +12,7 @@ export default function IntegrationList() {
 
   return (
     <div className="p-3 overflow-y-auto">
-      <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2 px-2">
+      <div className="text-xs font-medium text-amcs-grey-300 uppercase tracking-wider mb-2 px-2">
         Integrations
       </div>
       {integrations.map((i) => {
@@ -23,8 +23,8 @@ export default function IntegrationList() {
             onClick={() => setActiveIntegration(i)}
             className={`px-3 py-2 rounded-lg mb-1 cursor-pointer text-sm transition-colors
               ${isActive
-                ? 'bg-sky-50 text-sky-600 font-medium'
-                : 'text-slate-700 hover:bg-slate-50'
+                ? 'bg-amcs-primary/10 text-amcs-primary font-medium'
+                : 'text-amcs-grey-600 hover:bg-amcs-grey-50'
               }`}
           >
             {i.icon || '\uD83D\uDCAC'} {i.name}

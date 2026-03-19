@@ -30,7 +30,7 @@ export default function ChatWindow() {
 
   if (!activeIntegration) {
     return (
-      <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
+      <div className="flex-1 flex items-center justify-center text-amcs-grey-300 text-sm">
         Select an integration to start chatting
       </div>
     )
@@ -96,19 +96,19 @@ export default function ChatWindow() {
   return (
     <div className="flex-1 min-w-0 flex flex-col">
       {/* Header */}
-      <div className="h-14 px-6 flex items-center justify-between border-b border-slate-200 bg-white">
-        <span className="text-sm font-medium text-slate-900">
+      <div className="h-14 px-6 flex items-center justify-between border-b border-amcs-grey-100 bg-white">
+        <span className="text-sm font-medium text-amcs-black">
           {activeIntegration.icon || '\uD83D\uDCAC'} {activeIntegration.name}
         </span>
-        <span className="text-xs text-slate-400">New session each message</span>
+        <span className="text-xs text-amcs-grey-300">New session each message</span>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+      <div className="flex-1 overflow-y-auto p-6 bg-amcs-grey-50">
         <PinnedBanner pins={selectedPins} onRemove={removeSelectedPin} />
         {currentMessages.length === 0 && activeIntegration.opening_greeting && (
           <div className="flex justify-start mb-4">
-            <div className="bg-white border border-slate-200 rounded-xl rounded-bl-sm px-4 py-3 max-w-[70%] text-sm leading-relaxed text-slate-900 markdown-body">
+            <div className="bg-white border border-amcs-grey-100 rounded-xl rounded-bl-sm px-4 py-3 max-w-[70%] text-sm leading-relaxed text-amcs-black markdown-body">
               {greetingNode}
             </div>
           </div>
@@ -116,18 +116,18 @@ export default function ChatWindow() {
         {currentMessages.map((m) => (
           <MessageBubble key={m.id} message={m} onPin={m.role === 'assistant' ? handlePin : undefined} />
         ))}
-        {isStreaming && <div className="text-slate-400 text-sm animate-pulse">Thinking...</div>}
-        {error && <div className="text-red-500 text-sm">{error}</div>}
+        {isStreaming && <div className="text-amcs-grey-300 text-sm animate-pulse">Thinking...</div>}
+        {error && <div className="text-amcs-negative text-sm">{error}</div>}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div className="px-6 py-3 border-t border-slate-200 bg-white">
+      <div className="px-6 py-3 border-t border-amcs-grey-100 bg-white">
         <div className="flex gap-2 items-end">
           <button
             onClick={() => setShowPinSelector(!showPinSelector)}
             title="Attach pinned responses"
-            className="text-slate-400 hover:text-sky-500 text-sm cursor-pointer transition-colors"
+            className="text-amcs-grey-300 hover:text-amcs-primary text-sm cursor-pointer transition-colors"
           >
             Pin
           </button>

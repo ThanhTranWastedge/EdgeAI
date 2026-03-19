@@ -46,12 +46,12 @@ export default function AdminPanel() {
       </div>
       <div className="space-y-2">
         {integrations.map((i) => (
-          <div key={i.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <div key={i.id} className="flex items-center justify-between p-3 bg-amcs-grey-50 rounded-lg border border-amcs-grey-100">
             <div>
-              <span className="text-sm text-slate-900">{i.name}</span>
-              <span className="text-xs text-slate-400 ml-2">{i.provider_type}</span>
+              <span className="text-sm text-amcs-black">{i.name}</span>
+              <span className="text-xs text-amcs-grey-300 ml-2">{i.provider_type}</span>
             </div>
-            <button onClick={async () => { if (confirm('Delete integration?')) { await deleteIntegrationApi(i.id); load() } }} className="px-3 py-1 rounded-lg text-xs text-red-500 border border-red-200 hover:bg-red-50 transition-colors cursor-pointer">
+            <button onClick={async () => { if (confirm('Delete integration?')) { await deleteIntegrationApi(i.id); load() } }} className="px-3 py-1 rounded-lg text-xs text-amcs-negative border border-amcs-negative/30 hover:bg-amcs-negative-light transition-colors cursor-pointer">
               Delete
             </button>
           </div>

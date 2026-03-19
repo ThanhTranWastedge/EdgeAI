@@ -36,26 +36,26 @@ export default function SettingsPage() {
 
   return (
     <div className="p-8 max-w-lg">
-      <h2 className="text-lg font-semibold text-slate-900 mb-6">Settings</h2>
+      <h2 className="text-lg font-semibold text-amcs-black mb-6">Settings</h2>
       <SectionCard title="Change Password">
         <div className="space-y-4">
           <div>
-            <label htmlFor="current-pw" className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+            <label htmlFor="current-pw" className="block text-sm font-medium text-amcs-grey-600 mb-1">Current Password</label>
             <input id="current-pw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className={`w-full ${inputCls}`} />
           </div>
           <div>
-            <label htmlFor="new-pw" className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+            <label htmlFor="new-pw" className="block text-sm font-medium text-amcs-grey-600 mb-1">New Password</label>
             <input id="new-pw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={`w-full ${inputCls}`} />
           </div>
           <div>
-            <label htmlFor="confirm-pw" className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+            <label htmlFor="confirm-pw" className="block text-sm font-medium text-amcs-grey-600 mb-1">Confirm New Password</label>
             <input id="confirm-pw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={`w-full ${inputCls}`} />
           </div>
           <button onClick={handleSubmit} className={btnPrimaryCls}>
             Update Password
           </button>
-          {message && <div className="text-green-500 text-sm">{message}</div>}
-          {error && <div className="text-red-500 text-sm">{error}</div>}
+          {message && <div className="text-amcs-positive text-sm">{message}</div>}
+          {error && <div className="text-amcs-negative text-sm">{error}</div>}
         </div>
       </SectionCard>
     </div>

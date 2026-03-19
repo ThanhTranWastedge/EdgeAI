@@ -40,19 +40,19 @@ export default function UserTable({ users, availableRoles, currentUserId, onCrea
       </div>
       <table className="w-full">
         <thead>
-          <tr className="border-b border-slate-200">
+          <tr className="border-b border-amcs-grey-100">
             <th className={thCls}>Username</th>
             <th className={thCls}>Full Name</th>
             <th className={thCls}>Role</th>
             <th className={`text-right ${thCls}`}>Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-amcs-grey-100">
           {users.map((u) => (
             <tr key={u.id}>
-              <td className="px-4 py-3 text-sm text-slate-900">{u.username}</td>
-              <td className="px-4 py-3 text-sm text-slate-500">{u.fullname || '—'}</td>
-              <td className="px-4 py-3 text-sm text-slate-900">{u.role}</td>
+              <td className="px-4 py-3 text-sm text-amcs-black">{u.username}</td>
+              <td className="px-4 py-3 text-sm text-amcs-grey-400">{u.fullname || '—'}</td>
+              <td className="px-4 py-3 text-sm text-amcs-black">{u.role}</td>
               <td className="px-4 py-3 text-right">
                 <button onClick={() => onToggleRole(u.id, u.role)} className={btnSecondaryCls}>
                   Toggle Role
