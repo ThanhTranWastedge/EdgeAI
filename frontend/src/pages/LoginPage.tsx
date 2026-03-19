@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { inputCls, btnPrimaryCls } from '../styles'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -34,7 +35,7 @@ export default function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter your username"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors"
+              className={`w-full ${inputCls}`}
             />
           </div>
           <div>
@@ -45,12 +46,12 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors"
+              className={`w-full ${inputCls}`}
             />
           </div>
           <button
             type="submit"
-            className="w-full px-4 py-2 rounded-lg bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500/20 cursor-pointer"
+            className={`w-full ${btnPrimaryCls} focus:outline-none focus:ring-2 focus:ring-sky-500/20`}
           >
             Sign In
           </button>

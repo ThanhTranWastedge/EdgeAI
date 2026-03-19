@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import Markdown from 'react-markdown'
 import { MessageData } from '../api/chat'
 
@@ -8,7 +9,7 @@ interface Props {
 
 export default function MessageBubble({ message, onPin }: Props) {
   const isUser = message.role === 'user'
-  const refs = message.references ? JSON.parse(message.references) : null
+  const refs = useMemo(() => message.references ? JSON.parse(message.references) : null, [message.references])
 
   return (
     <div className={`flex mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>

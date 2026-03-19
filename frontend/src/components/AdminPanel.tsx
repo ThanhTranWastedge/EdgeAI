@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Integration, listIntegrationsApi, createIntegrationApi, deleteIntegrationApi } from '../api/integrations'
+import { inputCls, selectCls, btnPrimaryCls } from '../styles'
 
 export default function AdminPanel() {
   const [integrations, setIntegrations] = useState<Integration[]>([])
@@ -34,14 +35,14 @@ export default function AdminPanel() {
   return (
     <div>
       <div className="flex gap-2 mb-4 flex-wrap">
-        <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors" />
-        <select value={providerType} onChange={(e) => setProviderType(e.target.value)} className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer">
+        <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
+        <select value={providerType} onChange={(e) => setProviderType(e.target.value)} className={selectCls}>
           <option value="ragflow">RAGFlow</option>
           <option value="openai_compatible">OpenAI Compatible</option>
         </select>
-        <textarea placeholder='{"base_url":"...","api_key":"..."}' value={configJson} onChange={(e) => setConfigJson(e.target.value)} rows={2} className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 font-mono flex-1 min-w-[300px] transition-colors" />
-        <input placeholder="Opening Greeting (optional)" value={greeting} onChange={(e) => setGreeting(e.target.value)} className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 flex-1 min-w-[200px] transition-colors" />
-        <button onClick={handleCreate} className="px-4 py-2 rounded-lg bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 transition-colors cursor-pointer">Add</button>
+        <textarea placeholder='{"base_url":"...","api_key":"..."}' value={configJson} onChange={(e) => setConfigJson(e.target.value)} rows={2} className={`${inputCls} font-mono flex-1 min-w-[300px]`} />
+        <input placeholder="Opening Greeting (optional)" value={greeting} onChange={(e) => setGreeting(e.target.value)} className={`${inputCls} flex-1 min-w-[200px]`} />
+        <button onClick={handleCreate} className={btnPrimaryCls}>Add</button>
       </div>
       <div className="space-y-2">
         {integrations.map((i) => (

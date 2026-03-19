@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { AxiosError } from 'axios'
 import { changePasswordApi } from '../api/auth'
+import SectionCard from '../components/SectionCard'
+import { inputCls, btnPrimaryCls } from '../styles'
 
 export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('')
@@ -35,30 +37,27 @@ export default function SettingsPage() {
   return (
     <div className="p-8 max-w-lg">
       <h2 className="text-lg font-semibold text-slate-900 mb-6">Settings</h2>
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <h3 className="text-base font-semibold text-slate-900">Change Password</h3>
-        </div>
-        <div className="p-6 space-y-4">
+      <SectionCard title="Change Password">
+        <div className="space-y-4">
           <div>
             <label htmlFor="current-pw" className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
-            <input id="current-pw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors" />
+            <input id="current-pw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className={`w-full ${inputCls}`} />
           </div>
           <div>
             <label htmlFor="new-pw" className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
-            <input id="new-pw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors" />
+            <input id="new-pw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={`w-full ${inputCls}`} />
           </div>
           <div>
             <label htmlFor="confirm-pw" className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
-            <input id="confirm-pw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors" />
+            <input id="confirm-pw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={`w-full ${inputCls}`} />
           </div>
-          <button onClick={handleSubmit} className="px-4 py-2 rounded-lg bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 transition-colors cursor-pointer">
+          <button onClick={handleSubmit} className={btnPrimaryCls}>
             Update Password
           </button>
           {message && <div className="text-green-500 text-sm">{message}</div>}
           {error && <div className="text-red-500 text-sm">{error}</div>}
         </div>
-      </div>
+      </SectionCard>
     </div>
   )
 }

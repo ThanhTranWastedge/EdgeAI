@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { User } from '../api/auth'
 import { Integration, listIntegrationsApi } from '../api/integrations'
 import { getUserAccessApi, setUserAccessApi } from '../api/manager'
+import { selectCls, btnPrimaryCls } from '../styles'
 
 interface Props {
   users: User[]
@@ -48,7 +49,7 @@ export default function UserAccessEditor({ users }: Props) {
       <select
         value={selectedUserId}
         onChange={(e) => setSelectedUserId(e.target.value)}
-        className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 mb-4 min-w-[200px] cursor-pointer"
+        className={`${selectCls} mb-4 min-w-[200px]`}
       >
         <option value="">Select a user...</option>
         {users.map((u) => (
@@ -76,7 +77,7 @@ export default function UserAccessEditor({ users }: Props) {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 rounded-lg bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 transition-colors disabled:opacity-50 cursor-pointer"
+            className={`${btnPrimaryCls} disabled:opacity-50`}
           >
             {saving ? 'Saving...' : 'Save Access'}
           </button>

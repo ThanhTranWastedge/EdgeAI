@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { X, ChevronDown } from 'lucide-react'
+import SectionCard from '../components/SectionCard'
+import { inputCls, selectCls, btnPrimaryCls } from '../styles'
 
 export default function AgentConfiguration() {
   const [activeTab, setActiveTab] = useState('Configuration')
@@ -18,7 +20,7 @@ export default function AgentConfiguration() {
           <button className="px-4 py-2 rounded-lg bg-white text-slate-600 text-sm font-medium border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
             Discard Changes
           </button>
-          <button className="px-4 py-2 rounded-lg bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 transition-colors cursor-pointer">
+          <button className={btnPrimaryCls}>
             Save Configuration
           </button>
         </div>
@@ -44,42 +46,22 @@ export default function AgentConfiguration() {
       {/* Configuration Tab */}
       {activeTab === 'Configuration' && (
         <div className="space-y-6">
-          {/* General Settings Card */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h2 className="text-base font-semibold text-slate-900">General Settings</h2>
-              <p className="text-xs text-slate-400 mt-1">Basic identification and fallback behavior for this agent.</p>
-            </div>
-            <div className="p-6 space-y-4">
+          <SectionCard title="General Settings" description="Basic identification and fallback behavior for this agent.">
+            <div className="space-y-4">
               <div>
                 <label htmlFor="agent-name" className="block text-sm font-medium text-slate-700 mb-1">Agent Name</label>
-                <input
-                  id="agent-name"
-                  type="text"
-                  defaultValue="Marketing Agent"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors"
-                />
+                <input id="agent-name" type="text" defaultValue="Marketing Agent" className={`w-full ${inputCls}`} />
               </div>
               <div>
                 <label htmlFor="empty-response" className="block text-sm font-medium text-slate-700 mb-1">Empty Response Message</label>
-                <input
-                  id="empty-response"
-                  type="text"
-                  defaultValue="I don't know"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors"
-                />
+                <input id="empty-response" type="text" defaultValue="I don't know" className={`w-full ${inputCls}`} />
                 <p className="text-xs text-slate-400 mt-1">This message will be sent when the agent cannot find a relevant answer.</p>
               </div>
             </div>
-          </div>
+          </SectionCard>
 
-          {/* Retrieval & Model Card */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h2 className="text-base font-semibold text-slate-900">Retrieval & Model</h2>
-              <p className="text-xs text-slate-400 mt-1">Configure which data this agent can access and its reasoning engine.</p>
-            </div>
-            <div className="p-6 space-y-4">
+          <SectionCard title="Retrieval & Model" description="Configure which data this agent can access and its reasoning engine.">
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Connected Datasets</label>
                 <div className="min-h-[46px] p-2 rounded-lg border border-slate-200 bg-slate-50 flex flex-wrap gap-2 items-center focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:border-sky-500 transition-all">
@@ -102,11 +84,7 @@ export default function AgentConfiguration() {
               <div>
                 <label htmlFor="llm-select" className="block text-sm font-medium text-slate-700 mb-1">Language Model (LLM)</label>
                 <div className="relative">
-                  <select
-                    id="llm-select"
-                    defaultValue="gpt-4o"
-                    className="w-full appearance-none px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors cursor-pointer"
-                  >
+                  <select id="llm-select" defaultValue="gpt-4o" className={`w-full appearance-none ${selectCls}`}>
                     <option value="gpt-4o">GPT-4o (OpenAI)</option>
                     <option value="gpt-4-turbo">GPT-4 Turbo (OpenAI)</option>
                     <option value="claude-3-opus">Claude 3 Opus (Anthropic)</option>
@@ -119,7 +97,7 @@ export default function AgentConfiguration() {
                 </div>
               </div>
             </div>
-          </div>
+          </SectionCard>
         </div>
       )}
 

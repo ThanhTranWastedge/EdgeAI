@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useChatStore } from '../store/chatStore'
 import { usePinStore } from '../store/pinStore'
 import { sendMessageStreamApi, getSessionsApi } from '../api/chat'
+import { inputCls, btnPrimaryCls } from '../styles'
 import MessageBubble from './MessageBubble'
 import PinnedBanner from './PinnedBanner'
 import PinSelector from './PinSelector'
@@ -102,8 +103,8 @@ export default function ChatWindow() {
             </div>
           </div>
         )}
-        {currentMessages.map((m, i) => (
-          <MessageBubble key={i} message={m} onPin={m.role === 'assistant' ? handlePin : undefined} />
+        {currentMessages.map((m) => (
+          <MessageBubble key={m.id} message={m} onPin={m.role === 'assistant' ? handlePin : undefined} />
         ))}
         {isStreaming && <div className="text-slate-400 text-sm animate-pulse">Thinking...</div>}
         {error && <div className="text-red-500 text-sm">{error}</div>}
@@ -125,12 +126,12 @@ export default function ChatWindow() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
             placeholder={`Ask ${activeIntegration.name} something...`}
-            className="flex-1 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors"
+            className={`flex-1 ${inputCls}`}
           />
           <button
             onClick={handleSend}
             disabled={isStreaming}
-            className="px-4 py-2 rounded-lg bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className={`${btnPrimaryCls} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             Send
           </button>
