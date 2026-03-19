@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import Markdown from 'react-markdown'
 import { useChatStore } from '../store/chatStore'
 import { usePinStore } from '../store/pinStore'
 import { sendMessageStreamApi, getSessionsApi } from '../api/chat'
@@ -15,6 +16,13 @@ export default function ChatWindow() {
   const [showPinSelector, setShowPinSelector] = useState(false)
   const [error, setError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const greetingNode = useMemo(
+    () => activeIntegration?.opening_greeting
+      ? <Markdown>{activeIntegration.opening_greeting}</Markdown>
+      : null,
+    [activeIntegration?.opening_greeting]
+  )
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -86,7 +94,7 @@ export default function ChatWindow() {
   }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 min-w-0 flex flex-col">
       {/* Header */}
       <div className="h-14 px-6 flex items-center justify-between border-b border-slate-200 bg-white">
         <span className="text-sm font-medium text-slate-900">
@@ -100,8 +108,8 @@ export default function ChatWindow() {
         <PinnedBanner pins={selectedPins} onRemove={removeSelectedPin} />
         {currentMessages.length === 0 && activeIntegration.opening_greeting && (
           <div className="flex justify-start mb-4">
-            <div className="bg-white border border-slate-200 rounded-xl rounded-bl-sm px-4 py-3 max-w-[70%] text-sm leading-relaxed text-slate-900 whitespace-pre-wrap">
-              {activeIntegration.opening_greeting}
+            <div className="bg-white border border-slate-200 rounded-xl rounded-bl-sm px-4 py-3 max-w-[70%] text-sm leading-relaxed text-slate-900 markdown-body">
+              {greetingNode}
             </div>
           </div>
         )}

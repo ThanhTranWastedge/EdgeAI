@@ -43,7 +43,7 @@ export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const initialCollapsed = localStorage.getItem(SIDEBAR_KEY) === 'true'
+  const initialCollapsed = localStorage.getItem(SIDEBAR_KEY) !== 'false'
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
   const isManualCollapseRef = useRef(initialCollapsed)
 
@@ -191,7 +191,7 @@ export default function Layout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 h-screen overflow-y-auto bg-slate-50">
+      <main className="flex-1 min-w-0 h-screen overflow-y-auto bg-slate-50">
         <Outlet />
       </main>
     </div>
