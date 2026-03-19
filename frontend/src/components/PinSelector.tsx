@@ -16,30 +16,29 @@ export default function PinSelector({ onClose }: Props) {
   }, [])
 
   return (
-    <div style={{ marginTop: 8, background: '#161b22', border: '1px solid #30363d', borderRadius: 8, padding: 12, maxHeight: 200, overflowY: 'auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{ fontSize: 12, color: '#8b949e' }}>Select pinned responses to inject:</span>
-        <span onClick={onClose} style={{ cursor: 'pointer', color: '#8b949e', fontSize: 12 }}>Close</span>
+    <div className="mt-2 bg-white border border-slate-200 rounded-lg p-3 max-h-[200px] overflow-y-auto shadow-sm">
+      <div className="flex justify-between mb-2">
+        <span className="text-xs text-slate-500">Select pinned responses to inject:</span>
+        <span onClick={onClose} className="cursor-pointer text-xs text-slate-400 hover:text-slate-600 transition-colors">
+          Close
+        </span>
       </div>
-      {allPins.length === 0 && <div style={{ color: '#484f58', fontSize: 12 }}>No pinned responses yet</div>}
+      {allPins.length === 0 && <div className="text-xs text-slate-400">No pinned responses yet</div>}
       {allPins.map((pin) => {
         const isSelected = selectedPins.some((p) => p.id === pin.id)
         return (
           <div
             key={pin.id}
             onClick={() => toggleSelectedPin(pin)}
-            style={{
-              padding: 8,
-              borderRadius: 4,
-              marginBottom: 4,
-              cursor: 'pointer',
-              background: isSelected ? 'rgba(255,215,0,0.1)' : 'transparent',
-              border: `1px solid ${isSelected ? 'rgba(255,215,0,0.3)' : 'transparent'}`,
-            }}
+            className={`p-2 rounded cursor-pointer mb-1 transition-colors
+              ${isSelected
+                ? 'bg-amber-50 border border-amber-200'
+                : 'hover:bg-slate-50 border border-transparent'
+              }`}
           >
-            <div style={{ fontSize: 12, color: '#c9d1d9' }}>{pin.label}</div>
-            <div style={{ fontSize: 10, color: '#484f58', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {pin.integration_name && <span style={{ color: '#8b949e' }}>[{pin.integration_name}] </span>}
+            <div className="text-xs text-slate-700">{pin.label}</div>
+            <div className="text-[10px] text-slate-400 overflow-hidden text-ellipsis whitespace-nowrap">
+              {pin.integration_name && <span className="text-slate-500">[{pin.integration_name}] </span>}
               {pin.content.slice(0, 80)}...
             </div>
           </div>

@@ -19,9 +19,11 @@ export default function ChatWindow() {
   }, [currentMessages])
 
   if (!activeIntegration) {
-    return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b949e' }}>
-      Select an integration to start chatting
-    </div>
+    return (
+      <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
+        Select an integration to start chatting
+      </div>
+    )
   }
 
   const handleSend = async () => {
@@ -32,7 +34,6 @@ export default function ChatWindow() {
     const userMsg = { id: 'temp-user', role: 'user', content: input, references: null, pinned: false, sequence: 1 }
     addMessage(userMsg)
 
-    // Add empty assistant message that will be filled by streaming
     const assistantMsg = { id: 'temp-assistant', role: 'assistant', content: '', references: null, pinned: false, sequence: 2 }
     addMessage(assistantMsg)
 
@@ -47,11 +48,9 @@ export default function ChatWindow() {
         message,
         pinnedIds.length > 0 ? pinnedIds : undefined,
         (chunk) => {
-          // Append each chunk to the assistant message
           updateLastMessage((prev) => prev + chunk)
         },
         async (_refs) => {
-          // Stream done - refresh sessions
           clearSelectedPins()
           const sessionsRes = await getSessionsApi(activeIntegration.id)
           setSessions(sessionsRes.data)
@@ -73,7 +72,6 @@ export default function ChatWindow() {
     const { createPinApi } = await import('../api/pins')
     try {
       await createPinApi(messageId, label)
-      // Mark message as pinned in local state
       useChatStore.setState((state) => ({
         currentMessages: state.currentMessages.map((m) =>
           m.id === messageId ? { ...m, pinned: true } : m
@@ -85,50 +83,55 @@ export default function ChatWindow() {
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '12px 20px', borderBottom: '1px solid #30363d', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <span style={{ fontSize: 15, color: '#fff' }}>{activeIntegration.icon || '\uD83D\uDCAC'} {activeIntegration.name}</span>
-        </div>
-        <span style={{ fontSize: 11, color: '#8b949e' }}>New session each message</span>
+    <div className="flex-1 flex flex-col">
+      {/* Header */}
+      <div className="h-14 px-6 flex items-center justify-between border-b border-slate-200 bg-white">
+        <span className="text-sm font-medium text-slate-900">
+          {activeIntegration.icon || '\uD83D\uDCAC'} {activeIntegration.name}
+        </span>
+        <span className="text-xs text-slate-400">New session each message</span>
       </div>
 
-      <div style={{ flex: 1, padding: 20, overflowY: 'auto' }}>
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
         <PinnedBanner pins={selectedPins} onRemove={removeSelectedPin} />
         {currentMessages.length === 0 && activeIntegration.opening_greeting && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 16 }}>
-            <div style={{
-              background: '#161b22',
-              border: '1px solid #30363d',
-              borderRadius: '12px 12px 12px 2px',
-              padding: '12px 16px',
-              maxWidth: '70%',
-            }}>
-              <div style={{ color: '#e0e0e0', fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                {activeIntegration.opening_greeting}
-              </div>
+          <div className="flex justify-start mb-4">
+            <div className="bg-white border border-slate-200 rounded-xl rounded-bl-sm px-4 py-3 max-w-[70%] text-sm leading-relaxed text-slate-900 whitespace-pre-wrap">
+              {activeIntegration.opening_greeting}
             </div>
           </div>
         )}
         {currentMessages.map((m, i) => (
           <MessageBubble key={i} message={m} onPin={m.role === 'assistant' ? handlePin : undefined} />
         ))}
-        {isStreaming && <div style={{ color: '#8b949e', fontSize: 13 }}>Thinking...</div>}
-        {error && <div style={{ color: '#cf6679', fontSize: 13 }}>{error}</div>}
+        {isStreaming && <div className="text-slate-400 text-sm animate-pulse">Thinking...</div>}
+        {error && <div className="text-red-500 text-sm">{error}</div>}
         <div ref={messagesEndRef} />
       </div>
 
-      <div style={{ padding: '12px 20px', borderTop: '1px solid #30363d' }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 16, cursor: 'pointer', color: '#8b949e' }} onClick={() => setShowPinSelector(!showPinSelector)} title="Attach pinned responses">Pin</span>
+      {/* Input */}
+      <div className="px-6 py-3 border-t border-slate-200 bg-white">
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={() => setShowPinSelector(!showPinSelector)}
+            title="Attach pinned responses"
+            className="text-slate-400 hover:text-sky-500 text-sm cursor-pointer transition-colors"
+          >
+            Pin
+          </button>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
             placeholder={`Ask ${activeIntegration.name} something...`}
-            style={{ flex: 1, background: '#161b22', border: '1px solid #30363d', borderRadius: 8, padding: '10px 14px', color: '#e0e0e0', fontSize: 13, outline: 'none' }}
+            className="flex-1 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors"
           />
-          <button onClick={handleSend} disabled={isStreaming} style={{ background: '#64ffda', color: '#0d1117', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 'bold', cursor: 'pointer', border: 'none' }}>
+          <button
+            onClick={handleSend}
+            disabled={isStreaming}
+            className="px-4 py-2 rounded-lg bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
             Send
           </button>
         </div>

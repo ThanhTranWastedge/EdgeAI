@@ -20,19 +20,23 @@ export default function SessionHistory() {
   if (!activeIntegration) return null
 
   return (
-    <div style={{ padding: 12, borderTop: '1px solid #30363d', overflowY: 'auto', flex: 1 }}>
-      <div style={{ fontSize: 11, color: '#8b949e', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Recent Sessions</div>
-      {sessions.length === 0 && <div style={{ fontSize: 12, color: '#484f58' }}>No sessions yet</div>}
+    <div className="p-3 border-t border-slate-200 overflow-y-auto flex-1">
+      <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2 px-2">
+        Recent Sessions
+      </div>
+      {sessions.length === 0 && (
+        <div className="text-xs text-slate-400 px-2">No sessions yet</div>
+      )}
       {sessions.map((s) => (
         <div
           key={s.id}
           onClick={() => viewSession(s.id)}
-          style={{ padding: 8, borderRadius: 4, marginBottom: 4, cursor: 'pointer', color: '#8b949e', fontSize: 12 }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = '#161b22')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          className="px-2 py-1.5 rounded text-xs text-slate-500 cursor-pointer hover:bg-slate-50 mb-0.5 transition-colors"
         >
-          {s.title.slice(0, 40)}{s.title.length > 40 ? '...' : ''}
-          <span style={{ color: '#484f58', fontSize: 10, marginLeft: 4 }}>
+          <span className="text-slate-700">
+            {s.title.slice(0, 40)}{s.title.length > 40 ? '...' : ''}
+          </span>
+          <span className="text-slate-400 text-[10px] ml-1">
             {new Date(s.created_at).toLocaleTimeString()}
           </span>
         </div>

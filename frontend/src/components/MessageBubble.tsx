@@ -11,38 +11,44 @@ export default function MessageBubble({ message, onPin }: Props) {
   const refs = message.references ? JSON.parse(message.references) : null
 
   return (
-    <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 16 }}>
-      <div style={{
-        background: isUser ? '#1a2332' : '#161b22',
-        border: '1px solid #30363d',
-        borderRadius: isUser ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-        padding: '12px 16px',
-        maxWidth: '70%',
-      }}>
+    <div className={`flex mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div
+        className={`rounded-xl px-4 py-3 max-w-[70%] text-sm leading-relaxed
+          ${isUser
+            ? 'bg-sky-50 text-slate-900 rounded-br-sm'
+            : 'bg-white border border-slate-200 text-slate-900 rounded-bl-sm'
+          }`}
+      >
         {isUser ? (
-          <div style={{ color: '#e0e0e0', fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-            {message.content}
-          </div>
+          <div className="whitespace-pre-wrap">{message.content}</div>
         ) : (
-          <div className="markdown-body" style={{ color: '#e0e0e0', fontSize: 13, lineHeight: 1.6 }}>
+          <div className="markdown-body">
             <Markdown>{message.content}</Markdown>
           </div>
         )}
         {!isUser && (
-          <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #30363d', display: 'flex', gap: 8 }}>
+          <div className="mt-2 pt-2 border-t border-slate-100 flex gap-2">
             {onPin && !message.pinned && (
-              <button onClick={() => onPin(message.id)} style={{ fontSize: 11, padding: '3px 8px', background: 'rgba(187,134,252,0.1)', border: '1px solid rgba(187,134,252,0.2)', borderRadius: 3, color: '#bb86fc', cursor: 'pointer' }}>
+              <button
+                onClick={() => onPin(message.id)}
+                className="text-xs px-2 py-1 rounded bg-purple-50 text-purple-600 border border-purple-100 hover:bg-purple-100 transition-colors cursor-pointer"
+              >
                 Pin
               </button>
             )}
-            {message.pinned && <span style={{ fontSize: 11, color: '#bb86fc' }}>Pinned</span>}
-            <button onClick={() => navigator.clipboard.writeText(message.content)} style={{ fontSize: 11, padding: '3px 8px', background: 'rgba(100,255,218,0.1)', border: '1px solid rgba(100,255,218,0.2)', borderRadius: 3, color: '#64ffda', cursor: 'pointer' }}>
+            {message.pinned && (
+              <span className="text-xs text-purple-500">Pinned</span>
+            )}
+            <button
+              onClick={() => navigator.clipboard.writeText(message.content)}
+              className="text-xs px-2 py-1 rounded bg-sky-50 text-sky-600 border border-sky-100 hover:bg-sky-100 transition-colors cursor-pointer"
+            >
               Copy
             </button>
           </div>
         )}
         {refs && refs.length > 0 && (
-          <div style={{ marginTop: 8, fontSize: 10, color: '#484f58' }}>
+          <div className="mt-2 text-[10px] text-slate-400">
             References: {refs.map((r: { document_name: string }) => r.document_name).join(', ')}
           </div>
         )}
