@@ -11,6 +11,7 @@ export default function ChatWindow() {
   const { activeIntegration, currentMessages, addMessage, clearMessages, setSessions, isStreaming, setStreaming, updateLastMessage } = useChatStore()
   const { selectedPins, removeSelectedPin, clearSelectedPins } = usePinStore()
   const [input, setInput] = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [showPinSelector, setShowPinSelector] = useState(false)
   const [error, setError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -41,6 +42,7 @@ export default function ChatWindow() {
     const pinnedIds = selectedPins.map((p) => p.id)
     const message = input
     setInput('')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
     setStreaming(true)
 
     try {
@@ -113,7 +115,7 @@ export default function ChatWindow() {
 
       {/* Input */}
       <div className="px-6 py-3 border-t border-slate-200 bg-white">
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-end">
           <button
             onClick={() => setShowPinSelector(!showPinSelector)}
             title="Attach pinned responses"
@@ -121,12 +123,23 @@ export default function ChatWindow() {
           >
             Pin
           </button>
-          <input
+          <textarea
+            ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+            rows={1}
+            onChange={(e) => {
+              setInput(e.target.value);
+              e.target.style.height = 'auto';
+              e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
             placeholder={`Ask ${activeIntegration.name} something...`}
-            className={`flex-1 ${inputCls}`}
+            className={`flex-1 ${inputCls} resize-none`}
           />
           <button
             onClick={handleSend}
