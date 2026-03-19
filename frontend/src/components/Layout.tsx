@@ -21,8 +21,8 @@ function NavItem({ icon, label, active, collapsed, onClick }: NavItemProps) {
       title={collapsed ? label : undefined}
       className={`w-full flex items-center ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer
         ${active
-          ? 'bg-sky-50 text-sky-600 font-semibold'
-          : 'text-slate-600 hover:bg-slate-100'
+          ? 'bg-amcs-primary/10 text-amcs-primary font-semibold'
+          : 'text-amcs-grey-500 hover:bg-amcs-grey-50'
         }`}
     >
       {icon}
@@ -78,22 +78,22 @@ export default function Layout() {
   const isAdmin = user?.role === 'admin'
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-amcs-grey-50">
       {/* Sidebar */}
-      <aside className={`${isCollapsed ? 'w-16' : 'w-60'} flex flex-col bg-slate-50 border-r border-slate-200 transition-all duration-300 overflow-hidden`}>
+      <aside className={`${isCollapsed ? 'w-16' : 'w-60'} flex flex-col bg-amcs-white border-r border-amcs-grey-100 transition-all duration-300 overflow-hidden`}>
         {/* Logo + toggle */}
-        <div className={`h-16 flex items-center ${isCollapsed ? 'justify-center' : 'px-6 justify-between'}`}>
+        <div className={`h-16 flex items-center shrink-0 ${isCollapsed ? 'justify-center' : 'px-5 justify-between'}`}>
           {!isCollapsed && (
-            <span
-              className="text-xl font-bold text-sky-500 cursor-pointer"
+            <img
+              src="/amcs-logo.svg"
+              alt="AMCS"
+              className="h-7 w-auto cursor-pointer"
               onClick={() => navigate('/chat')}
-            >
-              EdgeAI
-            </span>
+            />
           )}
           <button
             onClick={toggleSidebar}
-            className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+            className="text-amcs-grey-300 hover:text-amcs-grey-600 transition-colors cursor-pointer"
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
@@ -112,7 +112,7 @@ export default function Layout() {
 
           {/* Role-gated items */}
           {isManagerOrAdmin && (
-            <div className="border-t border-slate-200 my-2 pt-2">
+            <div className="border-t border-amcs-grey-100 my-2 pt-2">
               <NavItem
                 icon={<Users className="w-5 h-5" />}
                 label="Manager"
@@ -135,7 +135,7 @@ export default function Layout() {
 
         {/* Bottom section */}
         <div className={`${isCollapsed ? 'px-1' : 'px-3'} pb-4 space-y-1`}>
-          <div className="border-t border-slate-200 pt-3 mb-1" />
+          <div className="border-t border-amcs-grey-100 pt-3 mb-1" />
           <NavItem
             icon={<HelpCircle className="w-5 h-5" />}
             label="Help"
@@ -153,33 +153,33 @@ export default function Layout() {
 
           {/* User info + logout */}
           {isCollapsed ? (
-            <div className="border-t border-slate-200 mt-3 pt-3 flex flex-col items-center gap-2">
+            <div className="border-t border-amcs-grey-100 mt-3 pt-3 flex flex-col items-center gap-2">
               <div
-                className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600"
+                className="w-8 h-8 rounded-full bg-amcs-grey-200 flex items-center justify-center text-xs font-semibold text-amcs-grey-500"
                 title={user?.fullname || user?.username}
               >
                 {getInitials(user?.fullname ?? undefined, user?.username ?? undefined)}
               </div>
               <button
                 onClick={logout}
-                className="text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+                className="text-amcs-grey-300 hover:text-amcs-negative transition-colors cursor-pointer"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
           ) : (
-            <div className="border-t border-slate-200 mt-3 pt-3 px-4">
-              <div className="text-sm font-medium text-slate-900">
+            <div className="border-t border-amcs-grey-100 mt-3 pt-3 px-4">
+              <div className="text-sm font-medium text-amcs-black">
                 {user?.fullname || user?.username}
               </div>
               <div className="flex items-center justify-between mt-1">
-                <span className="text-xs bg-slate-200 text-slate-600 rounded-full px-2 py-0.5">
+                <span className="text-xs bg-amcs-grey-200 text-amcs-grey-500 rounded-full px-2 py-0.5">
                   {user?.role}
                 </span>
                 <button
                   onClick={logout}
-                  className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-xs text-amcs-grey-300 hover:text-amcs-negative transition-colors cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   Logout
@@ -191,7 +191,7 @@ export default function Layout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0 h-screen overflow-y-auto bg-slate-50">
+      <main className="flex-1 min-w-0 h-screen overflow-y-auto bg-amcs-grey-50">
         <Outlet />
       </main>
     </div>
