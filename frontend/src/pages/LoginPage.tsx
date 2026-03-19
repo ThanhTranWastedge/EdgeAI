@@ -48,10 +48,7 @@ export default function LoginPage() {
       />
       <div className="absolute inset-0 bg-black/40" />
       <form onSubmit={handleSubmit} className="relative bg-white/20 backdrop-blur-md rounded-xl shadow-lg p-8 w-[400px] border border-white/30">
-        <div className="flex items-center gap-3 mb-6">
-          <img src="/logo.png" alt="" width={40} height={40} className="h-10 w-10 rounded-lg object-cover" />
-          <span className="text-2xl font-bold text-white">EdgeAI</span>
-        </div>
+        <h1 className="text-2xl font-bold text-white mb-6">EdgeAI</h1>
         {error && <div className="text-amcs-negative/70 text-sm mb-4">{error}</div>}
         <div className="space-y-4">
           <div>
