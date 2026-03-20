@@ -14,10 +14,10 @@ export default function MessageBubble({ message, onPin }: Props) {
   return (
     <div className={`flex mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`rounded-xl px-4 py-3 max-w-[70%] text-sm leading-relaxed
+        className={`px-4 py-3 max-w-[70%] text-sm leading-relaxed
           ${isUser
-            ? 'bg-amcs-primary/10 text-amcs-black rounded-br-sm'
-            : 'bg-amcs-white border border-amcs-grey-100 text-amcs-black rounded-bl-sm'
+            ? 'bg-amcs-primary text-white rounded-[14px_14px_4px_14px]'
+            : 'bg-white border border-we-border text-we-text rounded-[14px_14px_14px_4px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
           }`}
       >
         {isUser ? (
@@ -28,21 +28,21 @@ export default function MessageBubble({ message, onPin }: Props) {
           </div>
         )}
         {!isUser && (
-          <div className="mt-2 pt-2 border-t border-amcs-grey-100 flex gap-2">
+          <div className="mt-2 pt-2 border-t border-we-border flex gap-2">
             {onPin && !message.pinned && (
               <button
                 onClick={() => onPin(message.id)}
-                className="text-xs px-2 py-1 rounded bg-amcs-primary/10 text-amcs-primary border border-amcs-primary/20 hover:bg-amcs-primary/20 transition-colors cursor-pointer"
+                className="text-xs px-2 py-1 rounded bg-amcs-positive-light text-[#166534] border border-[#bbf7d0] hover:bg-[#dcfce7] transition-colors cursor-pointer"
               >
                 Pin
               </button>
             )}
             {message.pinned && (
-              <span className="text-xs text-amcs-primary">Pinned</span>
+              <span className="text-xs text-we-accent">Pinned</span>
             )}
             <button
               onClick={() => navigator.clipboard.writeText(message.content)}
-              className="text-xs px-2 py-1 rounded bg-amcs-primary/10 text-amcs-primary border border-amcs-primary/20 hover:bg-amcs-grey-100 transition-colors cursor-pointer"
+              className="text-xs px-2 py-1 rounded bg-[#f0f9ff] text-[#0c4a6e] border border-[#bae6fd] hover:bg-[#e0f2fe] transition-colors cursor-pointer"
             >
               Copy
             </button>

@@ -1,8 +1,13 @@
 import { useEffect } from 'react'
 import { useChatStore } from '../store/chatStore'
 import { getSessionsApi, getSessionApi } from '../api/chat'
+import { sidebarSectionLabelCls } from '../styles'
 
-export default function SessionHistory() {
+interface Props {
+  collapsed: boolean
+}
+
+export default function SessionHistory({ collapsed }: Props) {
   const { activeIntegration, sessions, setSessions, setCurrentMessages } = useChatStore()
 
   useEffect(() => {
@@ -19,26 +24,20 @@ export default function SessionHistory() {
 
   if (!activeIntegration) return null
 
+  if (collapsed) {
+    return null // No room to show session titles in collapsed sidebar
+  }
+
   return (
-    <div className="p-3 border-t border-amcs-grey-100 overflow-y-auto flex-1">
-      <div className="text-xs font-medium text-amcs-grey-300 uppercase tracking-wider mb-2 px-2">
-        Recent Sessions
-      </div>
-      {sessions.length === 0 && (
-        <div className="text-xs text-amcs-grey-300 px-2">No sessions yet</div>
-      )}
+    <div>
+      <div className={sidebarSectionLabelCls}>Recent Sessions</div>
       {sessions.map((s) => (
         <div
           key={s.id}
           onClick={() => viewSession(s.id)}
-          className="px-2 py-1.5 rounded text-xs text-amcs-grey-400 cursor-pointer hover:bg-amcs-grey-50 mb-0.5 transition-colors"
+          className="px-3 py-1 mx-1 rounded text-[11px] text-white/45 cursor-pointer hover:text-white/65 transition-colors truncate"
         >
-          <span className="text-amcs-grey-600">
-            {s.title.slice(0, 40)}{s.title.length > 40 ? '...' : ''}
-          </span>
-          <span className="text-amcs-grey-300 text-[10px] ml-1">
-            {new Date(s.created_at).toLocaleTimeString()}
-          </span>
+          {s.title}
         </div>
       ))}
     </div>
