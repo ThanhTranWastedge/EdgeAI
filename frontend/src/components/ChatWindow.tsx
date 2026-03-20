@@ -94,9 +94,9 @@ export default function ChatWindow() {
   }
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col bg-we-canvas relative">
+    <div className="flex-1 min-w-0 flex flex-col bg-we-canvas">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 pb-24">
+      <div className="flex-1 overflow-y-auto p-6">
         <PinnedBanner pins={selectedPins} onRemove={removeSelectedPin} />
 
         {/* Agent header card */}
@@ -127,15 +127,15 @@ export default function ChatWindow() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Pin selector — opens above floating input */}
+      {/* Pin selector */}
       {showPinSelector && (
-        <div className="absolute bottom-20 left-6 right-6 z-20">
+        <div className="px-6 max-md:px-3">
           <PinSelector onClose={() => setShowPinSelector(false)} />
         </div>
       )}
 
-      {/* Floating input bar */}
-      <div className="absolute bottom-4 left-6 right-6 z-10 max-md:left-3 max-md:right-3">
+      {/* Input bar */}
+      <div className="shrink-0 px-6 pb-4 pt-2 max-md:px-3">
         <div className="bg-white rounded-[14px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-we-border flex items-end gap-3 pl-5 pr-2 py-2">
           <button
             onClick={() => setShowPinSelector(!showPinSelector)}
