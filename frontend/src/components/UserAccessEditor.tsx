@@ -67,7 +67,7 @@ export default function UserAccessEditor({ users }: Props) {
                   type="checkbox"
                   checked={grantedIds.has(i.id)}
                   onChange={() => toggleIntegration(i.id)}
-                  className="rounded border-amcs-grey-200 text-amcs-primary focus:ring-amcs-primary/20"
+                  className="rounded border-amcs-grey-200 text-amcs-primary focus:ring-we-blue/20"
                 />
                 <span className="text-amcs-black">{i.name}</span>
                 <span className="text-xs text-amcs-grey-300">({i.provider_type})</span>
