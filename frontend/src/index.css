@@ -24,9 +24,9 @@
 
 @theme {
   /* ─ Colors ─ */
-  --color-amcs-primary: #dc3b75;
-  --color-amcs-primary-hover: #e36291;
-  --color-amcs-primary-light: #ed9dba;
+  --color-amcs-primary: #004457;
+  --color-amcs-primary-hover: #005a73;
+  --color-amcs-primary-light: #1488CA;
   --color-amcs-black: #131619;
   --color-amcs-white: #ffffff;
 
@@ -38,10 +38,16 @@
   --color-amcs-grey-500: #484b4c;
   --color-amcs-grey-600: #2c2c2c;
 
-  --color-amcs-positive: #0a8200;
-  --color-amcs-positive-light: #eaf4e8;
+  --color-amcs-positive: #4faf30;
+  --color-amcs-positive-light: #f0fdf4;
   --color-amcs-negative: #f97315;
   --color-amcs-negative-light: #fff7ed;
+
+  /* ─ WasteEdge-specific tokens ─ */
+  --color-we-sidebar: #004457;
+  --color-we-accent: #4faf30;
+  --color-we-blue: #1488CA;
+  --color-we-sidebar-hover: #005a73;
 
   /* ─ Font families (Tailwind v4 uses --font-* namespace) ─ */
   --font-heading: "Inter", "Helvetica Neue", Arial, sans-serif;
