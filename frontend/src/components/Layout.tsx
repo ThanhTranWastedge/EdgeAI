@@ -24,7 +24,7 @@ function NavItem({ icon, label, active, collapsed, onClick }: NavItemProps) {
       className={`w-full flex items-center ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer
         ${active
           ? 'bg-we-accent/15 text-we-accent font-semibold'
-          : 'text-white/60 hover:bg-we-sidebar-hover hover:text-white/80'
+          : 'text-white/75 hover:bg-we-sidebar-hover hover:text-white/90'
         }`}
     >
       {icon}
