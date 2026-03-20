@@ -33,7 +33,7 @@ export default function IntegrationList({ collapsed }: Props) {
       {integrations.map((i) => {
         const isActive = activeIntegration?.id === i.id
         const avatar = (
-          <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 ${isActive ? 'bg-we-accent/20 text-we-accent' : 'bg-white/10 text-white/60'}`}>
+          <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 ${isActive ? 'bg-we-accent/20 text-we-accent' : 'bg-we-blue text-white'}`}>
             {i.name.charAt(0).toUpperCase()}
           </span>
         )
