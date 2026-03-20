@@ -16,8 +16,8 @@ export default function MessageBubble({ message, onPin }: Props) {
       <div
         className={`px-4 py-3 max-w-[70%] text-sm leading-relaxed
           ${isUser
-            ? 'bg-[#004457] text-white rounded-[14px_14px_4px_14px]'
-            : 'bg-white border border-[#e2e8f0] text-[#1e293b] rounded-[14px_14px_14px_4px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
+            ? 'bg-amcs-primary text-white rounded-[14px_14px_4px_14px]'
+            : 'bg-white border border-we-border text-we-text rounded-[14px_14px_14px_4px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
           }`}
       >
         {isUser ? (
@@ -28,11 +28,11 @@ export default function MessageBubble({ message, onPin }: Props) {
           </div>
         )}
         {!isUser && (
-          <div className="mt-2 pt-2 border-t border-[#e2e8f0] flex gap-2">
+          <div className="mt-2 pt-2 border-t border-we-border flex gap-2">
             {onPin && !message.pinned && (
               <button
                 onClick={() => onPin(message.id)}
-                className="text-xs px-2 py-1 rounded bg-[#f0fdf4] text-[#166534] border border-[#bbf7d0] hover:bg-[#dcfce7] transition-colors cursor-pointer"
+                className="text-xs px-2 py-1 rounded bg-amcs-positive-light text-[#166534] border border-[#bbf7d0] hover:bg-[#dcfce7] transition-colors cursor-pointer"
               >
                 Pin
               </button>

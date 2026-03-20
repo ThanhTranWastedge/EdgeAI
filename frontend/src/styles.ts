@@ -18,3 +18,6 @@ export const thCls =
 
 export const labelCls =
   'block text-sm font-medium text-amcs-grey-600 mb-1'
+
+export const sidebarSectionLabelCls =
+  'text-[10px] uppercase tracking-[1.2px] text-white/35 px-3 pt-3 pb-1'

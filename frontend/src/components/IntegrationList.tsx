@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { listIntegrationsApi, Integration } from '../api/integrations'
 import { useChatStore } from '../store/chatStore'
+import { sidebarSectionLabelCls } from '../styles'
 
 interface Props {
   collapsed: boolean
@@ -17,9 +18,7 @@ export default function IntegrationList({ collapsed }: Props) {
   return (
     <div>
       {!collapsed && (
-        <div className="text-[10px] uppercase tracking-[1.2px] text-white/[0.35] px-3 pt-3 pb-1">
-          Integrations
-        </div>
+        <div className={sidebarSectionLabelCls}>Integrations</div>
       )}
       {integrations.map((i) => {
         const isActive = activeIntegration?.id === i.id
@@ -41,7 +40,7 @@ export default function IntegrationList({ collapsed }: Props) {
             onClick={() => setActiveIntegration(i)}
             className={`flex items-center gap-2 px-3 py-1.5 mx-1 rounded-lg cursor-pointer text-xs transition-colors
               ${isActive
-                ? 'bg-[rgba(79,175,48,0.12)] text-we-accent'
+                ? 'bg-we-accent/12 text-we-accent'
                 : 'text-white/55 hover:text-white/75'
               }`}
           >

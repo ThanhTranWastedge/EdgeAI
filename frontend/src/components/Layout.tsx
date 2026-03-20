@@ -23,7 +23,7 @@ function NavItem({ icon, label, active, collapsed, onClick }: NavItemProps) {
       title={collapsed ? label : undefined}
       className={`w-full flex items-center ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer
         ${active
-          ? 'bg-[rgba(79,175,48,0.15)] text-we-accent font-semibold'
+          ? 'bg-we-accent/15 text-we-accent font-semibold'
           : 'text-white/60 hover:bg-we-sidebar-hover hover:text-white/80'
         }`}
     >
@@ -80,28 +80,15 @@ export default function Layout() {
   const isAdmin = user?.role === 'admin'
 
   return (
-    <div className="flex h-screen bg-[#f8fafc]">
+    <div className="flex h-screen bg-we-canvas">
       {/* Sidebar */}
       <aside className={`${isCollapsed ? 'w-16' : 'w-60'} flex flex-col bg-we-sidebar transition-all duration-300 overflow-hidden`}>
         {/* Logo + toggle */}
-        <div className={`h-16 flex items-center shrink-0 ${isCollapsed ? 'justify-center' : 'px-5 justify-between'} border-b border-white/[0.08]`}>
-          {!isCollapsed && (
-            <div
-              className="flex items-center gap-2 cursor-pointer"
-              onClick={() => navigate('/chat')}
-            >
-              <div className="w-7 h-7 bg-we-accent rounded-md flex items-center justify-center text-xs font-extrabold text-white">E</div>
-              <span className="text-base font-bold text-white">EdgeAI</span>
-            </div>
-          )}
-          {isCollapsed && (
-            <div
-              className="w-7 h-7 bg-we-accent rounded-md flex items-center justify-center text-xs font-extrabold text-white cursor-pointer"
-              onClick={() => navigate('/chat')}
-            >
-              E
-            </div>
-          )}
+        <div className={`h-16 flex items-center shrink-0 ${isCollapsed ? 'justify-center' : 'px-5 justify-between'} border-b border-white/8`}>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/chat')}>
+            <div className="w-7 h-7 bg-we-accent rounded-md flex items-center justify-center text-xs font-extrabold text-white">E</div>
+            {!isCollapsed && <span className="text-base font-bold text-white">EdgeAI</span>}
+          </div>
           <button
             onClick={toggleSidebar}
             className="text-white/30 hover:text-white/60 transition-colors cursor-pointer"
@@ -112,7 +99,7 @@ export default function Layout() {
         </div>
 
         {/* Main nav */}
-        <nav className={`${isCollapsed ? 'px-1' : 'px-3'} py-2 space-y-1 shrink-0 border-b border-white/[0.06]`}>
+        <nav className={`${isCollapsed ? 'px-1' : 'px-3'} py-2 space-y-1 shrink-0 border-b border-white/6`}>
           <NavItem
             icon={<MessageSquare className="w-5 h-5" />}
             label="Chat"
@@ -152,7 +139,7 @@ export default function Layout() {
 
         {/* Bottom section */}
         <div className={`${isCollapsed ? 'px-1' : 'px-3'} pb-4 space-y-1 shrink-0`}>
-          <div className="border-t border-white/[0.08] pt-3 mb-1" />
+          <div className="border-t border-white/8 pt-3 mb-1" />
           <NavItem
             icon={<HelpCircle className="w-5 h-5" />}
             label="Help"
@@ -170,7 +157,7 @@ export default function Layout() {
 
           {/* User info + logout */}
           {isCollapsed ? (
-            <div className="border-t border-white/[0.08] mt-3 pt-3 flex flex-col items-center gap-2">
+            <div className="border-t border-white/8 mt-3 pt-3 flex flex-col items-center gap-2">
               <div
                 className="w-8 h-8 rounded-full bg-we-blue flex items-center justify-center text-xs font-semibold text-white"
                 title={user?.fullname || user?.username}
@@ -186,7 +173,7 @@ export default function Layout() {
               </button>
             </div>
           ) : (
-            <div className="border-t border-white/[0.08] mt-3 pt-3 px-4">
+            <div className="border-t border-white/8 mt-3 pt-3 px-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-we-blue flex items-center justify-center text-xs font-bold text-white shrink-0">
                   {getInitials(user?.fullname ?? undefined, user?.username ?? undefined)}
@@ -211,7 +198,7 @@ export default function Layout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0 h-screen overflow-y-auto bg-[#f8fafc]">
+      <main className="flex-1 min-w-0 h-screen overflow-y-auto bg-we-canvas">
         <Outlet />
       </main>
     </div>
