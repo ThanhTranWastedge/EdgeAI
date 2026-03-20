@@ -3,6 +3,7 @@ import { useAuthStore } from '../store/authStore'
 export default function HelpPage() {
   const user = useAuthStore((s) => s.user)
   const isManagerOrAdmin = user?.role === 'manager' || user?.role === 'admin'
+  const isAdmin = user?.role === 'admin'
 
   return (
     <div className="p-8 max-w-2xl">
@@ -124,6 +125,44 @@ export default function HelpPage() {
               <p className="text-amcs-grey-500 leading-relaxed mt-2">
                 Users will only see integrations they have been granted access to. Managers and admins always see all integrations.
               </p>
+            </section>
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className="border-t border-amcs-grey-100 pt-6 mt-8">
+            <h2 className="text-lg font-semibold text-amcs-black mb-4">Admin Guide</h2>
+
+            <section className="mb-6">
+              <h3 className="text-base font-semibold text-amcs-black mb-2">Managing Integrations</h3>
+              <p className="text-amcs-grey-500 leading-relaxed">
+                Integrations connect EdgeAI to AI providers. Each integration has a provider type, configuration, and optional opening greeting.
+              </p>
+              <ol className="list-decimal list-inside text-amcs-grey-500 leading-loose mt-1">
+                <li>Go to <strong className="text-amcs-black">Admin</strong> in the sidebar</li>
+                <li>Under <strong className="text-amcs-black">Integrations</strong>, enter a name and select a provider type (<strong className="text-amcs-black">RAGFlow</strong> or <strong className="text-amcs-black">OpenAI Compatible</strong>)</li>
+                <li>Provide the provider configuration as JSON (e.g., <code className="bg-amcs-grey-100 text-amcs-grey-600 rounded px-1.5 py-0.5 text-xs font-mono">{'{"base_url":"...","api_key":"..."}'}</code>)</li>
+                <li>Optionally add an <strong className="text-amcs-black">Opening Greeting</strong> (supports Markdown) — this is shown to users when they select the integration</li>
+                <li>Click <strong className="text-amcs-black">Add</strong> to create the integration</li>
+              </ol>
+              <p className="text-amcs-grey-500 leading-relaxed mt-2">
+                To edit an integration, click <strong className="text-amcs-black">Edit</strong>, update the fields, and click <strong className="text-amcs-black">Save Changes</strong>.
+                Leave the config field empty to keep the current configuration.
+                To remove an integration, click <strong className="text-amcs-black">Delete</strong>.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="text-base font-semibold text-amcs-black mb-2">Managing Users (Admin)</h3>
+              <p className="text-amcs-grey-500 leading-relaxed">
+                As an admin, you can manage <strong className="text-amcs-black">all user accounts</strong> including other admins. This differs from manager access, which cannot manage admin accounts.
+              </p>
+              <ol className="list-decimal list-inside text-amcs-grey-500 leading-loose mt-1">
+                <li>Go to <strong className="text-amcs-black">Admin</strong> &gt; <strong className="text-amcs-black">Users</strong></li>
+                <li>Create accounts with any role: <strong className="text-amcs-black">User</strong>, <strong className="text-amcs-black">Manager</strong>, or <strong className="text-amcs-black">Admin</strong></li>
+                <li><strong className="text-amcs-black">Toggle Role</strong> cycles through User → Manager → Admin</li>
+                <li>You cannot delete your own account or change your own role</li>
+              </ol>
             </section>
           </div>
         )}
