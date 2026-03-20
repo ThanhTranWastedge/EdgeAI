@@ -2,7 +2,11 @@ import { useEffect } from 'react'
 import { useChatStore } from '../store/chatStore'
 import { getSessionsApi, getSessionApi } from '../api/chat'
 
-export default function SessionHistory() {
+interface Props {
+  collapsed: boolean
+}
+
+export default function SessionHistory({ collapsed: _collapsed }: Props) {
   const { activeIntegration, sessions, setSessions, setCurrentMessages } = useChatStore()
 
   useEffect(() => {

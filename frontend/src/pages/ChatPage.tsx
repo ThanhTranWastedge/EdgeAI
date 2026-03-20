@@ -6,8 +6,8 @@ export default function ChatPage() {
   return (
     <div className="flex h-full">
       <div className="w-56 flex flex-col border-r border-amcs-grey-100 bg-amcs-white">
-        <IntegrationList />
-        <SessionHistory />
+        <IntegrationList collapsed={false} />
+        <SessionHistory collapsed={false} />
       </div>
       <ChatWindow />
     </div>
