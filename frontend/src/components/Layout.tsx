@@ -2,6 +2,8 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { MessageSquare, Users, Shield, HelpCircle, Settings, LogOut, ChevronLeft, ChevronRight } from 'lucide-react'
+import IntegrationList from './IntegrationList'
+import SessionHistory from './SessionHistory'
 
 const SIDEBAR_KEY = 'sidebar-collapsed'
 const BREAKPOINT = 768
@@ -142,8 +144,11 @@ export default function Layout() {
           )}
         </nav>
 
-        {/* Scrollable middle — will host IntegrationList + SessionHistory in Task 6 */}
-        <div className="flex-1 overflow-y-auto" />
+        {/* Scrollable middle — integrations + recent sessions */}
+        <div className="flex-1 overflow-y-auto">
+          <IntegrationList collapsed={isCollapsed} />
+          <SessionHistory collapsed={isCollapsed} />
+        </div>
 
         {/* Bottom section */}
         <div className={`${isCollapsed ? 'px-1' : 'px-3'} pb-4 space-y-1 shrink-0`}>
