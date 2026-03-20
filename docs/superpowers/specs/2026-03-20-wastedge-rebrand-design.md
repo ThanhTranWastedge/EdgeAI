@@ -89,6 +89,11 @@ Convert the sidebar from white background to deep teal (`#004457`). Move `Integr
 - **IntegrationList.tsx:** Restyle for dark background. Active state uses green highlight instead of pink.
 - **SessionHistory.tsx:** Restyle for dark background. Compact text with ellipsis overflow.
 
+### Conditional Rendering in Sidebar
+
+- **"INTEGRATIONS" header:** Always visible. The integration list always has content (fetched on mount).
+- **"RECENT SESSIONS" header + list:** Only visible when an integration is selected (`activeIntegration` is truthy). When no integration is selected, the sidebar middle section shows only the integrations list. The section header and session items render together — if there are no sessions for the selected integration, the header still shows with an empty state (no items, no placeholder text needed).
+
 ## 3. Chat Page
 
 ### Layout
@@ -99,7 +104,7 @@ No page header bar. Content area starts directly with the chat content on `#f8fa
 
 When an integration with an `opening_greeting` is selected and no messages have been sent:
 
-1. **Agent header card** — white card with agent icon (teal rounded square), agent name, "Online" status
+1. **Agent header card** — white card with agent icon (teal rounded square), agent name, and static "Online" label (purely decorative, not a real connectivity indicator)
 2. **Single greeting card** — white elevated card (`border-radius: 12px`, `box-shadow: 0 1px 3px rgba(0,0,0,0.04)`) containing the full markdown-rendered greeting content
 
 The greeting card renders the `opening_greeting` markdown as-is inside a single card — headings, paragraphs, lists all flow naturally within it.
@@ -126,7 +131,7 @@ Replace the current `border-t` attached input with a floating bar:
 
 ### Pin Selector
 
-The Pin selector currently opens below the input. With the floating input, it should open as a dropdown above the input bar (popping upward).
+The current "📌 Pins" text button remains as part of the floating input bar, positioned to the left of the textarea (before the input text). Clicking it opens the PinSelector dropdown **above** the floating input bar (popping upward instead of downward, since the input is at the bottom of the screen). The pin button styling updates to match the new palette but its position and behavior stay the same.
 
 ## 4. Login Page
 
@@ -188,6 +193,7 @@ Update the shared className constants:
 
 - `btnPrimaryCls`: Change pink references to teal `#004457`
 - `inputCls`: Update focus ring from `amcs-primary-light` to `we-blue`
+- `selectCls`: Update focus ring from `amcs-primary-light` to `we-blue`
 - `btnDangerCls`: Keep as-is (orange/red)
 - `btnSecondaryCls`: Update to use teal/blue palette
 
@@ -220,3 +226,7 @@ Update the shared className constants:
 | `frontend/src/components/AdminPanel.tsx` | Role badge colors, button colors |
 | `frontend/src/components/ManagerPanel.tsx` | Role badge colors, button colors |
 | `frontend/src/components/SectionCard.tsx` | Updated card styling if needed |
+| `frontend/src/components/UserTable.tsx` | Update any `amcs-primary` token references |
+| `frontend/src/components/UserAccessEditor.tsx` | Update any `amcs-primary` token references |
+
+**Note:** Markdown links in `index.css` `.markdown-body a` will change from pink to teal — verify readability during implementation.
