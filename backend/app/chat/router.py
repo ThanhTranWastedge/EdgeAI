@@ -133,10 +133,6 @@ async def send_message(
         pins = pin_result.scalars().all()
         context = [p.content for p in pins]
 
-    existing_session, history, next_sequence = await _prepare_session_for_send(
-        db, user, integration_id, body
-    )
-
     # Send to provider first (before creating session) to avoid orphaned rows on failure
     if body.stream:
         # For streaming, we must create session first since response is async
@@ -148,6 +144,10 @@ async def send_message(
         db.add(user_msg)
         await db.commit()
         return await _stream_response(integration, session.id, body.message, context)
+
+    existing_session, history, next_sequence = await _prepare_session_for_send(
+        db, user, integration_id, body
+    )
 
     # Non-streaming: call provider before persisting
     provider = get_provider(integration)
