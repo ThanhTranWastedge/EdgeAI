@@ -361,7 +361,14 @@ async def test_stream_exception_persists_error_assistant_and_emits_error_event(c
     assert response.status_code == 200
     assert user_message_was_persisted_before_stream_error is True
     events = parse_sse_events(response.text)
-    assert ("error", json.dumps({"detail": "Provider error during streaming"})) in events
+    error_events = [
+        json.loads(data)
+        for event_name, data in events
+        if event_name == "error"
+    ]
+    assert len(error_events) == 1
+    assert error_events[0]["detail"] == "Provider error during streaming"
+    assert error_events[0]["session_id"] is not None
     assert all(event_name != "done" for event_name, _ in events)
 
     async with TestingSessionLocal() as db:

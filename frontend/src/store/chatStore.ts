@@ -14,9 +14,7 @@ interface ChatState {
   setCurrentMessages: (messages: MessageData[], sessionId?: string | null) => void
   addMessage: (message: MessageData) => void
   updateMessageContent: (messageId: string, updater: (prevContent: string) => string) => void
-  updateLastMessage: (updater: (prevContent: string) => string) => void
   setStreaming: (streaming: boolean) => void
-  clearMessages: () => void
   startNewChat: () => void
 }
 
@@ -48,16 +46,6 @@ export const useChatStore = create<ChatState>((set) => ({
     currentMessages[messageIndex] = { ...message, content: updater(message.content) }
     return { currentMessages }
   }),
-  updateLastMessage: (updater) => set((state) => {
-    const msgs = [...state.currentMessages]
-    if (msgs.length > 0) {
-      const last = { ...msgs[msgs.length - 1] }
-      last.content = updater(last.content)
-      msgs[msgs.length - 1] = last
-    }
-    return { currentMessages: msgs }
-  }),
   setStreaming: (streaming) => set({ isStreaming: streaming }),
-  clearMessages: () => set({ currentMessages: [], activeSessionId: null }),
   startNewChat: () => set({ currentMessages: [], activeSessionId: null }),
 }))

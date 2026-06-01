@@ -48,7 +48,7 @@ export const sendMessageStreamApi = async (
   sessionId: string | null | undefined,
   onChunk: (text: string) => void,
   onDone: (refs: unknown, sessionId: string | null) => void | Promise<void>,
-  onError: (error: string) => void,
+  onError: (error: string, sessionId: string | null) => void | Promise<void>,
 ) => {
   const token = localStorage.getItem(TOKEN_KEY)
   const response = await fetch(`/api/chat/${integrationId}/send`, {
@@ -66,7 +66,7 @@ export const sendMessageStreamApi = async (
   })
 
   if (!response.ok) {
-    onError('Failed to connect to chat provider')
+    await onError('Failed to connect to chat provider', null)
     return
   }
 
@@ -84,16 +84,20 @@ export const sendMessageStreamApi = async (
     dataLines = []
 
     if (currentEvent === 'done' || currentEvent === 'error') {
+      let meta: { references?: unknown; session_id?: string; detail?: string }
       try {
-        const meta = JSON.parse(data)
-        if (currentEvent === 'done') {
-          await onDone(meta.references, meta.session_id || null)
-        }
-        if (currentEvent === 'error' && meta.detail) {
-          onError(meta.detail)
-        }
+        meta = JSON.parse(data)
       } catch {
         // ignore malformed metadata
+        currentEvent = ''
+        return
+      }
+
+      if (currentEvent === 'done') {
+        await onDone(meta.references, meta.session_id || null)
+      }
+      if (currentEvent === 'error' && meta.detail) {
+        await onError(meta.detail, meta.session_id || null)
       }
     } else {
       onChunk(data)

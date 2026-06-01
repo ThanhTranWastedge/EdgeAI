@@ -287,7 +287,10 @@ async def _stream_response(
                     None,
                     assistant_sequence,
                 )
-                yield {"event": "error", "data": json.dumps({"detail": "Provider error during streaming"})}
+                yield {"event": "error", "data": json.dumps({
+                    "detail": "Provider error during streaming",
+                    "session_id": session_id,
+                })}
                 return
 
             if not assistant_saved:

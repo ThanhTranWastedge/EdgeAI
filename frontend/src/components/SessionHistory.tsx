@@ -18,7 +18,9 @@ export default function SessionHistory({ collapsed }: Props) {
 
   const viewSession = async (sessionId: string) => {
     if (!activeIntegration || isStreaming) return
-    const { data } = await getSessionApi(activeIntegration.id, sessionId)
+    const integrationId = activeIntegration.id
+    const { data } = await getSessionApi(integrationId, sessionId)
+    if (useChatStore.getState().activeIntegration?.id !== integrationId) return
     setCurrentMessages(data.messages, data.id)
   }
 

@@ -94,6 +94,20 @@ export default function ChatWindow() {
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
     setStreaming(true)
 
+    const tempAssistantStillVisible = () =>
+      useChatStore
+        .getState()
+        .currentMessages.some((m) => m.id === assistantTempId)
+
+    const reloadPersistedSession = async (returnedSessionId: string) => {
+      setActiveSessionId(returnedSessionId)
+      const { data } = await getSessionApi(integrationId, returnedSessionId)
+      if (!tempAssistantStillVisible()) return false
+
+      setCurrentMessages(data.messages, data.id)
+      return true
+    }
+
     try {
       await sendMessageStreamApi(
         integrationId,
@@ -104,20 +118,11 @@ export default function ChatWindow() {
           updateMessageContent(assistantTempId, (prev) => prev + chunk)
         },
         async (_refs, returnedSessionId) => {
-          const isCurrentMessage = useChatStore
-            .getState()
-            .currentMessages.some((m) => m.id === assistantTempId)
-          if (!isCurrentMessage) return
+          if (!tempAssistantStillVisible()) return
 
           if (returnedSessionId) {
-            setActiveSessionId(returnedSessionId)
-            const { data } = await getSessionApi(integrationId, returnedSessionId)
-            const stillCurrentMessage = useChatStore
-              .getState()
-              .currentMessages.some((m) => m.id === assistantTempId)
-            if (!stillCurrentMessage) return
-
-            setCurrentMessages(data.messages, data.id)
+            const reloaded = await reloadPersistedSession(returnedSessionId)
+            if (!reloaded) return
           }
           clearSelectedPins()
           const sessionsRes = await getSessionsApi(integrationId)
@@ -125,17 +130,24 @@ export default function ChatWindow() {
             setSessions(sessionsRes.data)
           }
         },
-        (errorMsg) => {
-          const isCurrentMessage = useChatStore
-            .getState()
-            .currentMessages.some((m) => m.id === assistantTempId)
-          if (isCurrentMessage) {
-            setError(errorMsg)
+        async (errorMsg, returnedSessionId) => {
+          if (!tempAssistantStillVisible()) return
+
+          if (returnedSessionId) {
+            const reloaded = await reloadPersistedSession(returnedSessionId)
+            if (!reloaded) return
+            const sessionsRes = await getSessionsApi(integrationId)
+            if (useChatStore.getState().activeIntegration?.id === integrationId) {
+              setSessions(sessionsRes.data)
+            }
           }
+          setError(errorMsg)
         },
       )
     } catch {
-      setError('Failed to get response. Please try again.')
+      if (tempAssistantStillVisible()) {
+        setError('Failed to get response. Please try again.')
+      }
     } finally {
       setStreaming(false)
     }
