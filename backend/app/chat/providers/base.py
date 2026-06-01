@@ -1,6 +1,11 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import AsyncGenerator
+from dataclasses import dataclass
+from typing import AsyncGenerator, Literal, TypedDict
+
+
+class ChatHistoryMessage(TypedDict):
+    role: Literal["user", "assistant"]
+    content: str
 
 
 @dataclass
@@ -24,6 +29,7 @@ class ChatProvider(ABC):
         self,
         message: str,
         context: list[str] | None = None,
+        history: list[ChatHistoryMessage] | None = None,
     ) -> ChatResponse:
         ...
 
@@ -32,5 +38,6 @@ class ChatProvider(ABC):
         self,
         message: str,
         context: list[str] | None = None,
+        history: list[ChatHistoryMessage] | None = None,
     ) -> AsyncGenerator[StreamChunk, None]:
         ...

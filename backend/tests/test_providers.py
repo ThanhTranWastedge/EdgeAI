@@ -43,6 +43,52 @@ async def test_openai_compat_send_message():
         assert result.content == "Hello from LLM"
 
 
+@pytest.mark.asyncio
+async def test_openai_compat_includes_history_between_context_and_latest_message():
+    config = {
+        "base_url": "https://api.example.com/v1",
+        "api_key": "sk-test",
+        "model": "gpt-4",
+        "system_prompt": "You are helpful.",
+        "parameters": {"temperature": 0.7},
+    }
+    provider = OpenAICompatProvider(config)
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": "Follow-up answer"}}]
+    }
+    mock_response.raise_for_status = MagicMock()
+
+    captured_payload = None
+
+    async def fake_post(*args, **kwargs):
+        nonlocal captured_payload
+        captured_payload = kwargs["json"]
+        return mock_response
+
+    history = [
+        {"role": "user", "content": "Initial question"},
+        {"role": "assistant", "content": "Initial answer"},
+    ]
+
+    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, side_effect=fake_post):
+        result = await provider.send_message(
+            "Follow-up question",
+            context=["Pinned context"],
+            history=history,
+        )
+
+    assert result.content == "Follow-up answer"
+    assert captured_payload["messages"] == [
+        {"role": "system", "content": "You are helpful."},
+        {"role": "system", "content": "[Injected context]: Pinned context"},
+        {"role": "user", "content": "Initial question"},
+        {"role": "assistant", "content": "Initial answer"},
+        {"role": "user", "content": "Follow-up question"},
+    ]
+
+
 def test_get_provider_openai():
     integration = MagicMock(spec=Integration)
     integration.provider_type = "openai_compatible"

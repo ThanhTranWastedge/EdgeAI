@@ -1,7 +1,7 @@
 import json
 from typing import AsyncGenerator
 import httpx
-from app.chat.providers.base import ChatProvider, ChatResponse, StreamChunk
+from app.chat.providers.base import ChatHistoryMessage, ChatProvider, ChatResponse, StreamChunk
 
 
 class OpenAICompatProvider(ChatProvider):
@@ -13,18 +13,31 @@ class OpenAICompatProvider(ChatProvider):
         self.parameters = config.get("parameters", {})
         self._headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
-    def _build_messages(self, message: str, context: list[str] | None = None) -> list[dict]:
+    def _build_messages(
+        self,
+        message: str,
+        context: list[str] | None = None,
+        history: list[ChatHistoryMessage] | None = None,
+    ) -> list[dict]:
         messages = []
         if self.system_prompt:
             messages.append({"role": "system", "content": self.system_prompt})
         if context:
             for ctx in context:
                 messages.append({"role": "system", "content": f"[Injected context]: {ctx}"})
+        if history:
+            for item in history:
+                messages.append({"role": item["role"], "content": item["content"]})
         messages.append({"role": "user", "content": message})
         return messages
 
-    async def send_message(self, message: str, context: list[str] | None = None) -> ChatResponse:
-        messages = self._build_messages(message, context)
+    async def send_message(
+        self,
+        message: str,
+        context: list[str] | None = None,
+        history: list[ChatHistoryMessage] | None = None,
+    ) -> ChatResponse:
+        messages = self._build_messages(message, context, history)
         payload = {"model": self.model, "messages": messages, "stream": False, **self.parameters}
 
         async with httpx.AsyncClient(headers=self._headers, timeout=120.0) as client:
@@ -37,8 +50,13 @@ class OpenAICompatProvider(ChatProvider):
             content = data["choices"][0]["message"]["content"]
             return ChatResponse(content=content)
 
-    async def stream_message(self, message: str, context: list[str] | None = None) -> AsyncGenerator[StreamChunk, None]:
-        messages = self._build_messages(message, context)
+    async def stream_message(
+        self,
+        message: str,
+        context: list[str] | None = None,
+        history: list[ChatHistoryMessage] | None = None,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        messages = self._build_messages(message, context, history)
         payload = {"model": self.model, "messages": messages, "stream": True, **self.parameters}
 
         async with httpx.AsyncClient(headers=self._headers, timeout=120.0) as client:
