@@ -38,7 +38,7 @@ The chat page has three areas:
 2. Type your message in the input field at the bottom
 3. Press **Enter** or click **Send**
 
-Each message creates a new session — EdgeAI is designed for single question-and-answer interactions, not multi-turn conversations.
+The first message starts a new session. You can ask follow-up questions in that same session until it reaches 20 total questions. The counter in the chat window shows your progress, such as `7/20`.
 
 If the integration has an opening greeting configured, you'll see it as a welcome message when no conversation is active.
 
@@ -47,6 +47,8 @@ The assistant's response streams in real-time. Once complete, the session appear
 ### Viewing Past Sessions
 
 Click any session in the **Recent Sessions** sidebar to view both your question and the assistant's response.
+
+Past sessions can be continued. Click a session in Recent Sessions to load it, then send another message. If the session has reached 20 questions, the input is disabled and you can use **New Chat** to start a fresh session with the same integration.
 
 ## Pinning Responses
 
@@ -66,6 +68,8 @@ Pinning lets you save useful assistant responses and reuse them as context in fu
 4. The pinned content is automatically prepended to your question as additional context for the AI
 
 This is useful for carrying knowledge across different integrations. For example, pin a response from a RAGFlow knowledge base and inject it into an OpenAI chat for further analysis.
+
+Selected pins apply only to the next message you send. After the message is sent, EdgeAI clears the selected pins. Follow-up questions use the session transcript as context, and you can attach pins again whenever a specific follow-up needs them.
 
 ### Managing Pins
 

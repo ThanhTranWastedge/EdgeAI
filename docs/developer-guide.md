@@ -71,9 +71,13 @@ Tests use an in-memory SQLite database. The `setup_db` fixture in `conftest.py` 
 
 ## Key Design Decisions
 
-### Single-Turn Sessions
+### Bounded Multi-Turn Sessions
 
-Every message creates a new `Session` with exactly two `Message` rows (user sequence=1, assistant sequence=2). There is no multi-turn conversation state. This is by design — the app is a question-answer gateway, not a chatbot.
+Each chat session can contain up to 20 total user questions. The first request creates a `Session`; follow-up requests include `session_id` and append new `Message` rows to that same session.
+
+The backend uses local EdgeAI messages as the source of truth for follow-up context. Before each provider call, prior `user` and `assistant` messages are loaded in sequence order and passed to the provider as `history`. Selected pinned responses are still passed separately as request-scoped `context`.
+
+For non-streaming requests, the provider is called before new messages are persisted. If the provider fails, no new rows are created. For streaming requests, the user message is persisted before the SSE response starts, and the assistant message is persisted when streaming completes. If streaming fails after the user message is saved, an assistant error message is persisted so the transcript remains coherent.
 
 ### Provider Abstraction
 
@@ -112,7 +116,7 @@ Authorization: Bearer <access_token>
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| `/api/chat/{integration_id}/send` | POST | User | Send message. Body: `{message, pinned_ids?, stream?}` |
+| `/api/chat/{integration_id}/send` | POST | User | Send message. Body: `{message, pinned_ids?, stream?, session_id?}`. Omit `session_id` to create a new session; include it to append to an existing session with fewer than 20 user questions. |
 | `/api/chat/{integration_id}/sessions` | GET | User | List 100 most recent sessions |
 | `/api/chat/{integration_id}/sessions/{id}` | GET | User | Get session with messages |
 
