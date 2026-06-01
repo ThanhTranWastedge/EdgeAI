@@ -45,7 +45,7 @@ export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const initialCollapsed = localStorage.getItem(SIDEBAR_KEY) !== 'false'
+  const initialCollapsed = localStorage.getItem(SIDEBAR_KEY) === 'true'
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
   const isManualCollapseRef = useRef(initialCollapsed)
 
