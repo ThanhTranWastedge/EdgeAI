@@ -7,7 +7,7 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 pydantic-settings==2.7.1
 httpx==0.28.1
-ragflow-sdk==0.16.0
+ragflow-sdk==0.25.5
 python-multipart==0.0.20
 sse-starlette==2.2.1
 pytest==8.3.4

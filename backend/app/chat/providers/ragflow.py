@@ -19,10 +19,11 @@ class RagflowProvider(ChatProvider):
                 raise ValueError(f"RAGFlow chat {self.chat_or_agent_id} not found")
             return chats[0]
         else:
-            agents = rag.list_agents(id=self.chat_or_agent_id)
-            if not agents:
+            agents = rag.list_agents()
+            agent = next((a for a in agents if a.id == self.chat_or_agent_id), None)
+            if not agent:
                 raise ValueError(f"RAGFlow agent {self.chat_or_agent_id} not found")
-            return agents[0]
+            return agent
 
     def _build_question(self, message: str, context: list[str] | None = None) -> str:
         if not context:
@@ -37,11 +38,14 @@ class RagflowProvider(ChatProvider):
         if isinstance(refs, list):
             result = []
             for ref in refs:
-                result.append({
-                    "content": getattr(ref, "content", ""),
-                    "document_name": getattr(ref, "document_name", ""),
-                    "similarity": getattr(ref, "similarity", 0),
-                })
+                if isinstance(ref, dict):
+                    result.append(ref)
+                else:
+                    result.append({
+                        "content": getattr(ref, "content", ""),
+                        "document_name": getattr(ref, "document_name", ""),
+                        "similarity": getattr(ref, "similarity", 0),
+                    })
             return result if result else None
         return None
 

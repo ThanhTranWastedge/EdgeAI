@@ -67,3 +67,50 @@ async def test_ragflow_send_with_context_prepends():
         await provider.send_message("my question", context=["ctx1", "ctx2"])
         assert "[Injected context]:" in captured_question
         assert "my question" in captured_question
+
+
+@pytest.mark.asyncio
+async def test_ragflow_agent_lookup_filters_client_side():
+    config = {
+        "base_url": "http://localhost:9380",
+        "api_key": "ragflow-key",
+        "agent_id": "agent-uuid",
+        "type": "agent",
+    }
+    provider = RagflowProvider(config)
+
+    mock_session = MagicMock()
+    mock_session.id = "agent-session"
+    mock_message = MagicMock()
+    mock_message.content = "agent answer"
+    mock_message.reference = []
+    mock_session.ask = MagicMock(return_value=iter([mock_message]))
+
+    other_agent = MagicMock()
+    other_agent.id = "other-agent"
+    target_agent = MagicMock()
+    target_agent.id = "agent-uuid"
+    target_agent.create_session.return_value = mock_session
+
+    class Ragflow0255Mock:
+        def list_agents(self):
+            return [other_agent, target_agent]
+
+    with patch("app.chat.providers.ragflow.RAGFlow", return_value=Ragflow0255Mock()):
+        result = await provider.send_message("question")
+        assert result.content == "agent answer"
+        target_agent.create_session.assert_called_once()
+
+
+def test_extract_references_preserves_ragflow_chunk_dicts():
+    provider = RagflowProvider({
+        "base_url": "http://localhost:9380",
+        "api_key": "ragflow-key",
+        "chat_id": "chat-uuid",
+    })
+    message = MagicMock()
+    message.reference = [
+        {"content": "chunk", "document_name": "doc.md", "similarity": 0.91, "id": "chunk-1"}
+    ]
+
+    assert provider._extract_references(message) == message.reference
