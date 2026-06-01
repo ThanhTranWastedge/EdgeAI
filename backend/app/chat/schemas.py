@@ -6,6 +6,7 @@ class SendMessageRequest(BaseModel):
     message: str
     pinned_ids: list[str] | None = None
     stream: bool = False
+    session_id: str | None = None
 
 
 class MessageResponse(BaseModel):

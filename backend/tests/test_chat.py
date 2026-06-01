@@ -50,6 +50,52 @@ async def test_send_message(client):
 
 
 @pytest.mark.asyncio
+async def test_send_message_appends_to_existing_session_with_history(client):
+    token, iid = await setup_user_and_integration(client)
+
+    first_response = ChatResponse(content="First answer", references=None, provider_session_id=None)
+    second_response = ChatResponse(content="Second answer", references=None, provider_session_id=None)
+
+    with patch("app.chat.router.get_provider") as mock_get:
+        mock_provider = AsyncMock()
+        mock_provider.send_message.side_effect = [first_response, second_response]
+        mock_get.return_value = mock_provider
+
+        first = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "First question", "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        session_id = first.json()["session_id"]
+
+        second = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "Second question", "session_id": session_id, "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert second.status_code == 200
+    assert second.json()["session_id"] == session_id
+    assert mock_provider.send_message.call_args_list[1].kwargs["history"] == [
+        {"role": "user", "content": "First question"},
+        {"role": "assistant", "content": "First answer"},
+    ]
+
+    detail = await client.get(
+        f"/api/chat/{iid}/sessions/{session_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    messages = detail.json()["messages"]
+    assert [m["content"] for m in messages] == [
+        "First question",
+        "First answer",
+        "Second question",
+        "Second answer",
+    ]
+    assert [m["sequence"] for m in messages] == [1, 2, 3, 4]
+
+
+@pytest.mark.asyncio
 async def test_list_sessions(client):
     token, iid = await setup_user_and_integration(client)
 

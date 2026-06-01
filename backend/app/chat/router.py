@@ -1,13 +1,14 @@
 import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Integration, Session, Message, PinnedResponse, User, UserIntegrationAccess
 from app.auth.dependencies import get_current_user
 from app.constants import ROLE_USER
 from app.chat.schemas import SendMessageRequest, SendMessageResponse, SessionResponse, SessionDetailResponse, MessageResponse
+from app.chat.providers.base import ChatHistoryMessage
 from app.chat.providers.factory import get_provider
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,92 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 def _serialize_refs(references) -> str | None:
     return json.dumps(references) if references else None
+
+
+MAX_USER_QUESTIONS_PER_SESSION = 20
+ASSISTANT_STREAM_ERROR_MESSAGE = "Assistant response failed during streaming. Please start a new chat or try another question."
+
+
+async def _ensure_integration_access(db: AsyncSession, user: User, integration_id: str) -> None:
+    if user.role != ROLE_USER:
+        return
+    access = await db.execute(
+        select(UserIntegrationAccess.id).where(
+            UserIntegrationAccess.user_id == user.id,
+            UserIntegrationAccess.integration_id == integration_id,
+        )
+    )
+    if not access.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="No access to this integration")
+
+
+async def _get_owned_session(
+    db: AsyncSession,
+    user: User,
+    integration_id: str,
+    session_id: str,
+) -> Session:
+    result = await db.execute(
+        select(Session).where(
+            Session.id == session_id,
+            Session.user_id == user.id,
+            Session.integration_id == integration_id,
+        )
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+
+async def _count_user_messages(db: AsyncSession, session_id: str) -> int:
+    result = await db.execute(
+        select(func.count()).select_from(Message).where(
+            Message.session_id == session_id,
+            Message.role == "user",
+        )
+    )
+    return int(result.scalar_one())
+
+
+async def _get_next_sequence(db: AsyncSession, session_id: str) -> int:
+    result = await db.execute(
+        select(func.max(Message.sequence)).where(Message.session_id == session_id)
+    )
+    max_sequence = result.scalar_one_or_none()
+    return int(max_sequence or 0) + 1
+
+
+async def _get_history(db: AsyncSession, session_id: str) -> list[ChatHistoryMessage]:
+    result = await db.execute(
+        select(Message)
+        .where(Message.session_id == session_id)
+        .order_by(Message.sequence)
+    )
+    messages = result.scalars().all()
+    return [
+        {"role": m.role, "content": m.content}
+        for m in messages
+        if m.role in {"user", "assistant"}
+    ]
+
+
+async def _prepare_session_for_send(
+    db: AsyncSession,
+    user: User,
+    integration_id: str,
+    body: SendMessageRequest,
+) -> tuple[Session | None, list[ChatHistoryMessage], int | None]:
+    if not body.session_id:
+        return None, [], None
+
+    session = await _get_owned_session(db, user, integration_id, body.session_id)
+    user_message_count = await _count_user_messages(db, session.id)
+    if user_message_count >= MAX_USER_QUESTIONS_PER_SESSION:
+        raise HTTPException(status_code=400, detail="Session question limit reached")
+    history = await _get_history(db, session.id)
+    next_sequence = await _get_next_sequence(db, session.id)
+    return session, history, next_sequence
 
 
 @router.post("/{integration_id}/send")
@@ -32,16 +119,7 @@ async def send_message(
     if not integration:
         raise HTTPException(status_code=404, detail="Integration not found")
 
-    # Check integration access for user role
-    if user.role == ROLE_USER:
-        access = await db.execute(
-            select(UserIntegrationAccess.id).where(
-                UserIntegrationAccess.user_id == user.id,
-                UserIntegrationAccess.integration_id == integration_id,
-            )
-        )
-        if not access.scalar_one_or_none():
-            raise HTTPException(status_code=403, detail="No access to this integration")
+    await _ensure_integration_access(db, user, integration_id)
 
     # Fetch pinned context if provided
     context = None
@@ -54,6 +132,10 @@ async def send_message(
         )
         pins = pin_result.scalars().all()
         context = [p.content for p in pins]
+
+    existing_session, history, next_sequence = await _prepare_session_for_send(
+        db, user, integration_id, body
+    )
 
     # Send to provider first (before creating session) to avoid orphaned rows on failure
     if body.stream:
@@ -70,30 +152,41 @@ async def send_message(
     # Non-streaming: call provider before persisting
     provider = get_provider(integration)
     try:
-        response = await provider.send_message(body.message, context=context)
+        response = await provider.send_message(body.message, context=context, history=history)
     except Exception as e:
         logger.error(f"Provider error: {e}")
         raise HTTPException(status_code=502, detail="Chat provider is unavailable")
 
-    # Provider succeeded — now persist session + messages
-    title = body.message[:80] + ("..." if len(body.message) > 80 else "")
-    session = Session(
-        user_id=user.id,
-        integration_id=integration_id,
-        title=title,
-        ragflow_session_id=response.provider_session_id,
-    )
-    db.add(session)
-    await db.flush()
+    if existing_session:
+        session = existing_session
+        user_sequence = next_sequence or 1
+    else:
+        title = body.message[:80] + ("..." if len(body.message) > 80 else "")
+        session = Session(
+            user_id=user.id,
+            integration_id=integration_id,
+            title=title,
+            ragflow_session_id=response.provider_session_id,
+        )
+        db.add(session)
+        await db.flush()
+        user_sequence = 1
 
-    user_msg = Message(session_id=session.id, role="user", content=body.message, sequence=1)
+    user_msg = Message(
+        session_id=session.id,
+        role="user",
+        content=body.message,
+        sequence=user_sequence,
+    )
     assistant_msg = Message(
         session_id=session.id,
         role="assistant",
         content=response.content,
         references=_serialize_refs(response.references),
-        sequence=2,
+        sequence=user_sequence + 1,
     )
+    if response.provider_session_id:
+        session.ragflow_session_id = response.provider_session_id
     db.add_all([user_msg, assistant_msg])
     await db.commit()
     await db.refresh(assistant_msg)
