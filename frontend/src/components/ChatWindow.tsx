@@ -9,13 +9,26 @@ import PinSelector from './PinSelector'
 import { Send } from 'lucide-react'
 
 export default function ChatWindow() {
-  const { activeIntegration, currentMessages, addMessage, clearMessages, setSessions, isStreaming, setStreaming, updateLastMessage } = useChatStore()
+  const {
+    activeIntegration,
+    activeSessionId,
+    currentMessages,
+    addMessage,
+    startNewChat,
+    setActiveSessionId,
+    setSessions,
+    isStreaming,
+    setStreaming,
+    updateLastMessage,
+  } = useChatStore()
   const { selectedPins, removeSelectedPin, clearSelectedPins } = usePinStore()
   const [input, setInput] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [showPinSelector, setShowPinSelector] = useState(false)
   const [error, setError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const userQuestionCount = currentMessages.filter((m) => m.role === 'user').length
+  const questionLimitReached = userQuestionCount >= 20
 
   const greetingNode = useMemo(
     () => activeIntegration?.opening_greeting
@@ -36,15 +49,37 @@ export default function ChatWindow() {
     )
   }
 
-  const handleSend = async () => {
-    if (!input.trim() || isStreaming) return
+  const handleNewChat = () => {
+    startNewChat()
+    clearSelectedPins()
     setError('')
-    clearMessages()
+    setInput('')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+  }
 
-    const userMsg = { id: 'temp-user', role: 'user', content: input, references: null, pinned: false, sequence: 1 }
+  const handleSend = async () => {
+    if (!input.trim() || isStreaming || questionLimitReached) return
+    setError('')
+
+    const nextSequence = currentMessages.reduce((max, message) => Math.max(max, message.sequence), 0) + 1
+    const userMsg = {
+      id: `temp-user-${Date.now()}`,
+      role: 'user',
+      content: input,
+      references: null,
+      pinned: false,
+      sequence: nextSequence,
+    }
     addMessage(userMsg)
 
-    const assistantMsg = { id: 'temp-assistant', role: 'assistant', content: '', references: null, pinned: false, sequence: 2 }
+    const assistantMsg = {
+      id: `temp-assistant-${Date.now()}`,
+      role: 'assistant',
+      content: '',
+      references: null,
+      pinned: false,
+      sequence: nextSequence + 1,
+    }
     addMessage(assistantMsg)
 
     const pinnedIds = selectedPins.map((p) => p.id)
@@ -58,10 +93,14 @@ export default function ChatWindow() {
         activeIntegration.id,
         message,
         pinnedIds.length > 0 ? pinnedIds : undefined,
+        activeSessionId,
         (chunk) => {
           updateLastMessage((prev) => prev + chunk)
         },
-        async (_refs) => {
+        async (_refs, returnedSessionId) => {
+          if (returnedSessionId) {
+            setActiveSessionId(returnedSessionId)
+          }
           clearSelectedPins()
           const sessionsRes = await getSessionsApi(activeIntegration.id)
           setSessions(sessionsRes.data)
@@ -97,6 +136,17 @@ export default function ChatWindow() {
     <div className="flex-1 min-w-0 flex flex-col bg-we-canvas">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="text-xs text-we-muted">
+            {userQuestionCount}/20
+          </div>
+          <button
+            onClick={handleNewChat}
+            className="text-xs font-medium text-amcs-primary hover:text-amcs-primary/80 transition-colors"
+          >
+            New Chat
+          </button>
+        </div>
         <PinnedBanner pins={selectedPins} onRemove={removeSelectedPin} />
 
         {/* Agent header card */}
@@ -134,6 +184,12 @@ export default function ChatWindow() {
         </div>
       )}
 
+      {questionLimitReached && (
+        <div className="px-6 pb-2 max-md:px-3 text-xs text-amcs-negative">
+          20-question limit reached. Start a new chat to continue.
+        </div>
+      )}
+
       {/* Input bar */}
       <div className="shrink-0 px-6 pb-4 pt-2 max-md:px-3">
         <div className="bg-white rounded-[14px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-we-border flex items-end gap-3 pl-5 pr-2 py-2">
@@ -148,6 +204,7 @@ export default function ChatWindow() {
             ref={textareaRef}
             value={input}
             rows={1}
+            disabled={questionLimitReached}
             onChange={(e) => {
               setInput(e.target.value);
               e.target.style.height = 'auto';
@@ -159,12 +216,16 @@ export default function ChatWindow() {
                 handleSend();
               }
             }}
-            placeholder={`Ask ${activeIntegration.name} something...`}
+            placeholder={
+              questionLimitReached
+                ? 'Start a new chat to continue...'
+                : `Ask ${activeIntegration.name} something...`
+            }
             className="flex-1 text-sm text-we-text placeholder:text-we-muted bg-transparent border-none outline-none resize-none py-1.5"
           />
           <button
             onClick={handleSend}
-            disabled={isStreaming}
+            disabled={isStreaming || questionLimitReached}
             className="w-10 h-10 bg-we-accent rounded-[10px] flex items-center justify-center text-white shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors hover:brightness-110"
           >
             <Send className="w-[18px] h-[18px]" />

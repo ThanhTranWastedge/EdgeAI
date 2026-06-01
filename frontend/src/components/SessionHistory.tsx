@@ -14,12 +14,12 @@ export default function SessionHistory({ collapsed }: Props) {
     if (activeIntegration) {
       getSessionsApi(activeIntegration.id).then(({ data }) => setSessions(data))
     }
-  }, [activeIntegration])
+  }, [activeIntegration, setSessions])
 
   const viewSession = async (sessionId: string) => {
     if (!activeIntegration) return
     const { data } = await getSessionApi(activeIntegration.id, sessionId)
-    setCurrentMessages(data.messages)
+    setCurrentMessages(data.messages, data.id)
   }
 
   if (!activeIntegration) return null

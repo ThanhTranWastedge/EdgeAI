@@ -28,13 +28,24 @@ export interface SendResponse {
   assistant_message: MessageData
 }
 
-export const sendMessageApi = (integrationId: string, message: string, pinnedIds?: string[]) =>
-  client.post<SendResponse>(`/chat/${integrationId}/send`, { message, pinned_ids: pinnedIds, stream: false })
+export const sendMessageApi = (
+  integrationId: string,
+  message: string,
+  pinnedIds?: string[],
+  sessionId?: string | null,
+) =>
+  client.post<SendResponse>(`/chat/${integrationId}/send`, {
+    message,
+    pinned_ids: pinnedIds,
+    stream: false,
+    session_id: sessionId || undefined,
+  })
 
 export const sendMessageStreamApi = async (
   integrationId: string,
   message: string,
   pinnedIds: string[] | undefined,
+  sessionId: string | null | undefined,
   onChunk: (text: string) => void,
   onDone: (refs: unknown, sessionId: string | null) => void,
   onError: (error: string) => void,
@@ -46,7 +57,12 @@ export const sendMessageStreamApi = async (
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ message, pinned_ids: pinnedIds, stream: true }),
+    body: JSON.stringify({
+      message,
+      pinned_ids: pinnedIds,
+      stream: true,
+      session_id: sessionId || undefined,
+    }),
   })
 
   if (!response.ok) {
@@ -70,8 +86,8 @@ export const sendMessageStreamApi = async (
     if (currentEvent === 'done' || currentEvent === 'error') {
       try {
         const meta = JSON.parse(data)
-        if (currentEvent === 'done' && meta.references !== undefined) {
-          onDone(meta.references, meta.provider_session_id)
+        if (currentEvent === 'done') {
+          onDone(meta.references, meta.session_id || null)
         }
         if (currentEvent === 'error' && meta.detail) {
           onError(meta.detail)
