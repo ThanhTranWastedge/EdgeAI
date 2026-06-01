@@ -70,6 +70,53 @@ async def test_ragflow_send_with_context_prepends():
 
 
 @pytest.mark.asyncio
+async def test_ragflow_send_with_history_builds_transcript_before_latest_question():
+    config = {
+        "base_url": "http://localhost:9380",
+        "api_key": "ragflow-key",
+        "chat_id": "chat-uuid",
+        "type": "chat",
+    }
+    provider = RagflowProvider(config)
+
+    mock_session = MagicMock()
+    mock_session.id = "s1"
+    mock_message = MagicMock()
+    mock_message.content = "answer"
+    mock_message.reference = []
+
+    captured_question = None
+
+    def fake_ask(question, stream=False):
+        nonlocal captured_question
+        captured_question = question
+        return iter([mock_message])
+
+    mock_session.ask = fake_ask
+    mock_chat = MagicMock()
+    mock_chat.create_session.return_value = mock_session
+    mock_rag = MagicMock()
+    mock_rag.list_chats.return_value = [mock_chat]
+
+    history = [
+        {"role": "user", "content": "What is the policy?"},
+        {"role": "assistant", "content": "The policy is A."},
+    ]
+
+    with patch("app.chat.providers.ragflow.RAGFlow", return_value=mock_rag):
+        await provider.send_message(
+            "Can you expand on that?",
+            context=["Pinned context"],
+            history=history,
+        )
+
+    assert captured_question.index("[Injected context]: Pinned context") < captured_question.index("[Conversation so far]")
+    assert "User: What is the policy?" in captured_question
+    assert "Assistant: The policy is A." in captured_question
+    assert captured_question.endswith("User question: Can you expand on that?")
+
+
+@pytest.mark.asyncio
 async def test_ragflow_agent_lookup_filters_client_side():
     config = {
         "base_url": "http://localhost:9380",

@@ -2,7 +2,7 @@ import asyncio
 import json
 from typing import AsyncGenerator
 from ragflow_sdk import RAGFlow
-from app.chat.providers.base import ChatProvider, ChatResponse, StreamChunk
+from app.chat.providers.base import ChatProvider, ChatResponse, StreamChunk, ChatHistoryMessage
 
 
 class RagflowProvider(ChatProvider):
@@ -25,11 +25,23 @@ class RagflowProvider(ChatProvider):
                 raise ValueError(f"RAGFlow agent {self.chat_or_agent_id} not found")
             return agent
 
-    def _build_question(self, message: str, context: list[str] | None = None) -> str:
-        if not context:
-            return message
-        ctx_parts = [f"[Injected context]: {c}" for c in context]
-        return "\n\n".join(ctx_parts) + f"\n\nUser question: {message}"
+    def _build_question(
+        self,
+        message: str,
+        context: list[str] | None = None,
+        history: list[ChatHistoryMessage] | None = None,
+    ) -> str:
+        parts = []
+        if context:
+            parts.extend(f"[Injected context]: {c}" for c in context)
+        if history:
+            transcript = ["[Conversation so far]"]
+            for item in history:
+                label = "User" if item["role"] == "user" else "Assistant"
+                transcript.append(f"{label}: {item['content']}")
+            parts.append("\n".join(transcript))
+        parts.append(f"User question: {message}")
+        return "\n\n".join(parts)
 
     def _extract_references(self, message_obj) -> list[dict] | None:
         refs = getattr(message_obj, "reference", None)
@@ -49,11 +61,16 @@ class RagflowProvider(ChatProvider):
             return result if result else None
         return None
 
-    def _sync_send(self, message: str, context: list[str] | None = None) -> ChatResponse:
+    def _sync_send(
+        self,
+        message: str,
+        context: list[str] | None = None,
+        history: list[ChatHistoryMessage] | None = None,
+    ) -> ChatResponse:
         rag = RAGFlow(api_key=self.api_key, base_url=self.base_url)
         entity = self._get_entity(rag)
         session = entity.create_session()
-        question = self._build_question(message, context)
+        question = self._build_question(message, context, history)
 
         full_content = ""
         references = None
@@ -67,14 +84,24 @@ class RagflowProvider(ChatProvider):
             provider_session_id=session.id,
         )
 
-    async def send_message(self, message: str, context: list[str] | None = None) -> ChatResponse:
-        return await asyncio.to_thread(self._sync_send, message, context)
+    async def send_message(
+        self,
+        message: str,
+        context: list[str] | None = None,
+        history: list[ChatHistoryMessage] | None = None,
+    ) -> ChatResponse:
+        return await asyncio.to_thread(self._sync_send, message, context, history)
 
-    async def stream_message(self, message: str, context: list[str] | None = None) -> AsyncGenerator[StreamChunk, None]:
+    async def stream_message(
+        self,
+        message: str,
+        context: list[str] | None = None,
+        history: list[ChatHistoryMessage] | None = None,
+    ) -> AsyncGenerator[StreamChunk, None]:
         rag = RAGFlow(api_key=self.api_key, base_url=self.base_url)
         entity = self._get_entity(rag)
         session = entity.create_session()
-        question = self._build_question(message, context)
+        question = self._build_question(message, context, history)
 
         queue: asyncio.Queue[StreamChunk | None] = asyncio.Queue()
 
