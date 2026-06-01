@@ -133,21 +133,37 @@ async def send_message(
         pins = pin_result.scalars().all()
         context = [p.content for p in pins]
 
-    # Send to provider first (before creating session) to avoid orphaned rows on failure
-    if body.stream:
-        # For streaming, we must create session first since response is async
-        title = body.message[:80] + ("..." if len(body.message) > 80 else "")
-        session = Session(user_id=user.id, integration_id=integration_id, title=title)
-        db.add(session)
-        await db.flush()
-        user_msg = Message(session_id=session.id, role="user", content=body.message, sequence=1)
-        db.add(user_msg)
-        await db.commit()
-        return await _stream_response(integration, session.id, body.message, context)
-
     existing_session, history, next_sequence = await _prepare_session_for_send(
         db, user, integration_id, body
     )
+
+    if body.stream:
+        if existing_session:
+            session = existing_session
+            user_sequence = next_sequence or 1
+        else:
+            title = body.message[:80] + ("..." if len(body.message) > 80 else "")
+            session = Session(user_id=user.id, integration_id=integration_id, title=title)
+            db.add(session)
+            await db.flush()
+            user_sequence = 1
+
+        user_msg = Message(
+            session_id=session.id,
+            role="user",
+            content=body.message,
+            sequence=user_sequence,
+        )
+        db.add(user_msg)
+        await db.commit()
+        return await _stream_response(
+            integration,
+            session.id,
+            body.message,
+            context,
+            history,
+            user_sequence + 1,
+        )
 
     # Non-streaming: call provider before persisting
     provider = get_provider(integration)
@@ -197,7 +213,14 @@ async def send_message(
     )
 
 
-async def _stream_response(integration, session_id, message, context):
+async def _stream_response(
+    integration,
+    session_id,
+    message,
+    context,
+    history,
+    assistant_sequence,
+):
     """Return SSE streaming response. Saves full message to DB after stream completes."""
     from sse_starlette.sse import EventSourceResponse
 
@@ -210,7 +233,7 @@ async def _stream_response(integration, session_id, message, context):
 
         try:
             chunk_count = 0
-            async for chunk in provider.stream_message(message, context=context):
+            async for chunk in provider.stream_message(message, context=context, history=history):
                 if chunk.done:
                     references = chunk.references
                     provider_session_id = chunk.provider_session_id
@@ -218,6 +241,7 @@ async def _stream_response(integration, session_id, message, context):
                     yield {"event": "done", "data": json.dumps({
                         "references": references,
                         "provider_session_id": provider_session_id,
+                        "session_id": session_id,
                     })}
                 else:
                     chunk_count += 1
@@ -225,6 +249,17 @@ async def _stream_response(integration, session_id, message, context):
                     yield {"data": chunk.content}
         except Exception as e:
             logger.error(f"Stream error after {chunk_count} chunks ({len(full_content)} chars): {e}")
+            from app.database import async_session
+            async with async_session() as save_db:
+                assistant_msg = Message(
+                    session_id=session_id,
+                    role="assistant",
+                    content=ASSISTANT_STREAM_ERROR_MESSAGE,
+                    references=None,
+                    sequence=assistant_sequence,
+                )
+                save_db.add(assistant_msg)
+                await save_db.commit()
             yield {"event": "error", "data": json.dumps({"detail": "Provider error during streaming"})}
             return
 
@@ -236,7 +271,7 @@ async def _stream_response(integration, session_id, message, context):
                 role="assistant",
                 content=full_content,
                 references=_serialize_refs(references),
-                sequence=2,
+                sequence=assistant_sequence,
             )
             save_db.add(assistant_msg)
             if provider_session_id:

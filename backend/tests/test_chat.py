@@ -96,6 +96,49 @@ async def test_send_message_appends_to_existing_session_with_history(client):
 
 
 @pytest.mark.asyncio
+async def test_streaming_send_appends_and_returns_session_id(client):
+    from tests.conftest import TestingSessionLocal
+
+    token, iid = await setup_user_and_integration(client)
+    stream_histories = []
+
+    async def fake_stream(message, context=None, history=None):
+        stream_histories.append(history)
+        yield type("Chunk", (), {"content": "streamed ", "done": False})()
+        yield type("Chunk", (), {"content": "answer", "done": False})()
+        yield type("Chunk", (), {"content": "", "done": True, "references": None, "provider_session_id": None})()
+
+    with (
+        patch("app.chat.router.get_provider") as mock_get,
+        patch("app.database.async_session", TestingSessionLocal),
+    ):
+        mock_provider = MagicMock()
+        mock_provider.stream_message = fake_stream
+        mock_get.return_value = mock_provider
+
+        first = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "stream q1", "stream": True},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        first_body = first.text
+        session_id = first_body.split('"session_id": "')[1].split('"')[0]
+
+        second = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "stream q2", "session_id": session_id, "stream": True},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert second.status_code == 200
+    assert f'"session_id": "{session_id}"' in second.text
+    assert stream_histories[1] == [
+        {"role": "user", "content": "stream q1"},
+        {"role": "assistant", "content": "streamed answer"},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_append_rejects_session_from_another_integration(client):
     token, iid = await setup_user_and_integration(client)
     from tests.conftest import TestingSessionLocal
