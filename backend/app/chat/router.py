@@ -230,6 +230,7 @@ async def _stream_response(
         full_content = ""
         references = None
         provider_session_id = None
+        assistant_saved = False
 
         try:
             chunk_count = 0
@@ -238,6 +239,14 @@ async def _stream_response(
                     references = chunk.references
                     provider_session_id = chunk.provider_session_id
                     logger.debug(f"Stream complete: {chunk_count} chunks, {len(full_content)} chars")
+                    await _save_stream_assistant_message(
+                        session_id,
+                        full_content,
+                        references,
+                        assistant_sequence,
+                        provider_session_id,
+                    )
+                    assistant_saved = True
                     yield {"event": "done", "data": json.dumps({
                         "references": references,
                         "provider_session_id": provider_session_id,
@@ -249,40 +258,52 @@ async def _stream_response(
                     yield {"data": chunk.content}
         except Exception as e:
             logger.error(f"Stream error after {chunk_count} chunks ({len(full_content)} chars): {e}")
-            from app.database import async_session
-            async with async_session() as save_db:
-                assistant_msg = Message(
-                    session_id=session_id,
-                    role="assistant",
-                    content=ASSISTANT_STREAM_ERROR_MESSAGE,
-                    references=None,
-                    sequence=assistant_sequence,
-                )
-                save_db.add(assistant_msg)
-                await save_db.commit()
+            await _save_stream_assistant_message(
+                session_id,
+                ASSISTANT_STREAM_ERROR_MESSAGE,
+                None,
+                assistant_sequence,
+            )
             yield {"event": "error", "data": json.dumps({"detail": "Provider error during streaming"})}
             return
 
-        # Save assistant message after stream completes
-        from app.database import async_session
-        async with async_session() as save_db:
-            assistant_msg = Message(
-                session_id=session_id,
-                role="assistant",
-                content=full_content,
-                references=_serialize_refs(references),
-                sequence=assistant_sequence,
+        if not assistant_saved:
+            await _save_stream_assistant_message(
+                session_id,
+                full_content,
+                references,
+                assistant_sequence,
+                provider_session_id,
             )
-            save_db.add(assistant_msg)
-            if provider_session_id:
-                await save_db.execute(
-                    Session.__table__.update()
-                    .where(Session.__table__.c.id == session_id)
-                    .values(ragflow_session_id=provider_session_id)
-                )
-            await save_db.commit()
 
     return EventSourceResponse(event_generator())
+
+
+async def _save_stream_assistant_message(
+    session_id,
+    content,
+    references,
+    assistant_sequence,
+    provider_session_id=None,
+):
+    from app.database import async_session
+
+    async with async_session() as save_db:
+        assistant_msg = Message(
+            session_id=session_id,
+            role="assistant",
+            content=content,
+            references=_serialize_refs(references),
+            sequence=assistant_sequence,
+        )
+        save_db.add(assistant_msg)
+        if provider_session_id:
+            await save_db.execute(
+                Session.__table__.update()
+                .where(Session.__table__.c.id == session_id)
+                .values(ragflow_session_id=provider_session_id)
+            )
+        await save_db.commit()
 
 
 @router.get("/{integration_id}/sessions", response_model=list[SessionResponse])

@@ -139,6 +139,87 @@ async def test_streaming_send_appends_and_returns_session_id(client):
 
 
 @pytest.mark.asyncio
+async def test_stream_done_event_waits_until_assistant_message_is_persisted(client):
+    from app.chat import router as chat_router
+    from app.models import Integration, Message, Session
+    from sqlalchemy import select
+    from tests.conftest import TestingSessionLocal
+
+    _, iid = await setup_user_and_integration(client)
+
+    async with TestingSessionLocal() as db:
+        integration_result = await db.execute(select(Integration).where(Integration.id == iid))
+        integration = integration_result.scalar_one()
+        session = Session(
+            user_id=integration.updated_by,
+            integration_id=iid,
+            title="stream ordering",
+        )
+        db.add(session)
+        await db.commit()
+        session_id = session.id
+
+    async def fake_stream(message, context=None, history=None):
+        yield type("Chunk", (), {"content": "saved ", "done": False})()
+        yield type("Chunk", (), {"content": "before done", "done": False})()
+        yield type(
+            "Chunk",
+            (),
+            {
+                "content": "",
+                "done": True,
+                "references": [{"source": "doc"}],
+                "provider_session_id": "provider-session",
+            },
+        )()
+
+    with (
+        patch("app.chat.router.get_provider") as mock_get,
+        patch("app.database.async_session", TestingSessionLocal),
+    ):
+        mock_provider = MagicMock()
+        mock_provider.stream_message = fake_stream
+        mock_get.return_value = mock_provider
+        response = await chat_router._stream_response(
+            integration,
+            session_id,
+            "ordering q",
+            None,
+            [],
+            2,
+        )
+
+        async for event in response.body_iterator:
+            if event.get("event") == "done":
+                async with TestingSessionLocal() as db:
+                    message_result = await db.execute(
+                        select(Message).where(
+                            Message.session_id == session_id,
+                            Message.role == "assistant",
+                        )
+                    )
+                    assistant_message = message_result.scalar_one_or_none()
+                    integration_result = await db.execute(
+                        select(Session.ragflow_session_id).where(Session.id == session_id)
+                    )
+                    provider_session_id = integration_result.scalar_one()
+
+                assert assistant_message is not None
+                assert assistant_message.content == "saved before done"
+                assert assistant_message.references == json.dumps([{"source": "doc"}])
+                assert assistant_message.sequence == 2
+                assert provider_session_id == "provider-session"
+                assert json.loads(event["data"]) == {
+                    "references": [{"source": "doc"}],
+                    "provider_session_id": "provider-session",
+                    "session_id": session_id,
+                }
+                break
+        else:
+            pytest.fail("Stream did not yield done event")
+
+
+@pytest.mark.asyncio
 async def test_append_rejects_session_from_another_integration(client):
     token, iid = await setup_user_and_integration(client)
     from tests.conftest import TestingSessionLocal
