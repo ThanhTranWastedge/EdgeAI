@@ -126,15 +126,19 @@ async def test_append_rejects_session_from_another_integration(client):
             json={"message": "First question", "stream": False},
             headers={"Authorization": f"Bearer {token}"},
         )
+        assert first.status_code == 200
+        session_id = first.json()["session_id"]
 
-    response = await client.post(
-        f"/api/chat/{other_iid}/send",
-        json={"message": "Bad append", "session_id": first.json()["session_id"], "stream": False},
-        headers={"Authorization": f"Bearer {token}"},
-    )
+        mock_provider.send_message.reset_mock()
+        response = await client.post(
+            f"/api/chat/{other_iid}/send",
+            json={"message": "Bad append", "session_id": session_id, "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Session not found"
+    mock_provider.send_message.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -151,6 +155,7 @@ async def test_append_enforces_twenty_user_question_cap(client):
             json={"message": "q1", "stream": False},
             headers={"Authorization": f"Bearer {token}"},
         )
+        assert first.status_code == 200
         session_id = first.json()["session_id"]
 
         for index in range(2, 21):
@@ -161,6 +166,7 @@ async def test_append_enforces_twenty_user_question_cap(client):
             )
             assert ok.status_code == 200
 
+        mock_provider.send_message.reset_mock()
         capped = await client.post(
             f"/api/chat/{iid}/send",
             json={"message": "q21", "session_id": session_id, "stream": False},
@@ -169,6 +175,7 @@ async def test_append_enforces_twenty_user_question_cap(client):
 
     assert capped.status_code == 400
     assert capped.json()["detail"] == "Session question limit reached"
+    mock_provider.send_message.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -204,15 +211,19 @@ async def test_append_rejects_session_owned_by_another_user(client):
             json={"message": "owner question", "stream": False},
             headers={"Authorization": f"Bearer {token}"},
         )
+        assert first.status_code == 200
+        session_id = first.json()["session_id"]
 
+        mock_provider.send_message.reset_mock()
         rejected = await client.post(
             f"/api/chat/{iid}/send",
-            json={"message": "intruder question", "session_id": first.json()["session_id"], "stream": False},
+            json={"message": "intruder question", "session_id": session_id, "stream": False},
             headers={"Authorization": f"Bearer {other_token}"},
         )
 
     assert rejected.status_code == 404
     assert rejected.json()["detail"] == "Session not found"
+    mock_provider.send_message.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -259,18 +270,20 @@ async def test_append_requires_current_user_integration_access(client):
         assert first.status_code == 200
         session_id = first.json()["session_id"]
 
-    async with TestingSessionLocal() as db:
-        await db.execute(delete(UserIntegrationAccess).where(UserIntegrationAccess.id == access_id))
-        await db.commit()
+        async with TestingSessionLocal() as db:
+            await db.execute(delete(UserIntegrationAccess).where(UserIntegrationAccess.id == access_id))
+            await db.commit()
 
-    denied = await client.post(
-        f"/api/chat/{iid}/send",
-        json={"message": "second", "session_id": session_id, "stream": False},
-        headers={"Authorization": f"Bearer {token}"},
-    )
+        mock_provider.send_message.reset_mock()
+        denied = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "second", "session_id": session_id, "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
 
     assert denied.status_code == 403
     assert denied.json()["detail"] == "No access to this integration"
+    mock_provider.send_message.assert_not_called()
 
 
 @pytest.mark.asyncio
