@@ -38,7 +38,7 @@ The chat page has three areas:
 2. Type your message in the input field at the bottom
 3. Press **Enter** or click **Send**
 
-The first message starts a new session. You can ask follow-up questions in that same session until it reaches 20 total questions. The counter in the chat window shows your progress, such as `7/20`.
+The first message starts a new session. You can ask follow-up questions in that same session until it reaches 10 total questions. The counter in the chat window shows your progress, such as `7/10`.
 
 If the integration has an opening greeting configured, you'll see it as a welcome message when no conversation is active.
 
@@ -48,7 +48,7 @@ The assistant's response streams in real-time. Once complete, the session appear
 
 Click any session in the **Recent Sessions** sidebar to view both your question and the assistant's response.
 
-Past sessions can be continued. Click a session in Recent Sessions to load it, then send another message. If the session has reached 20 questions, the input is disabled and you can use **New Chat** to start a fresh session with the same integration.
+Past sessions can be continued. Click a session in Recent Sessions to load it, then send another message. If the session has reached 10 questions, the input is disabled and you can use **New Chat** to start a fresh session with the same integration.
 
 ## Pinning Responses
 

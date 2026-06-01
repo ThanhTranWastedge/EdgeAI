@@ -2,14 +2,14 @@
 
 ## Overview
 
-EdgeAI will support bounded multi-turn chat sessions. A session can contain up to 20 total user questions, normally paired with up to 20 assistant responses. The first question creates a session. Follow-up questions append to the same session when the request includes a session id.
+EdgeAI will support bounded multi-turn chat sessions. A session can contain up to 10 total user questions, normally paired with up to 10 assistant responses. The first question creates a session. Follow-up questions append to the same session when the request includes a session id.
 
 The design keeps the existing chat endpoint and provider abstraction, while adding transcript history as provider input. Local EdgeAI messages are the source of truth for follow-up context across all providers.
 
 ## Goals
 
 - Let users ask follow-up questions in the same session.
-- Cap each session at 20 total user questions.
+- Cap each session at 10 total user questions.
 - Allow users to continue previous sessions from Recent Sessions.
 - Keep selected pins request-scoped and available for follow-ups.
 - Preserve existing streaming and non-streaming API behavior where possible.
@@ -27,9 +27,9 @@ The design keeps the existing chat endpoint and provider abstraction, while addi
 
 Selecting an integration without choosing a session starts in a blank chat state with the integration greeting. Sending the first question creates a new session.
 
-Clicking a prior session in Recent Sessions loads its messages and makes it the active session. If that session has fewer than 20 user questions, the user can continue it. If it has 20 user questions, sending is disabled and the UI shows a short message such as:
+Clicking a prior session in Recent Sessions loads its messages and makes it the active session. If that session has fewer than 10 user questions, the user can continue it. If it has 10 user questions, sending is disabled and the UI shows a short message such as:
 
-> 20-question limit reached. Start a new chat to continue.
+> 10-question limit reached. Start a new chat to continue.
 
 A New Chat control clears the active session id, current messages, selected pins, and local errors for the selected integration. It does not delete prior history.
 
@@ -57,7 +57,7 @@ When `session_id` is present, the endpoint verifies:
 - the user still has access to the integration
 - the session has fewer than 20 existing user messages
 
-For missing, foreign, or integration-mismatched sessions, the backend returns `404 Session not found` to avoid leaking session existence. If current integration access is missing, the backend returns the existing `403` response. If the session already has 20 user messages, the backend returns `400 Session question limit reached`.
+For missing, foreign, or integration-mismatched sessions, the backend returns `404 Session not found` to avoid leaking session existence. If current integration access is missing, the backend returns the existing `403` response. If the session already has 10 user messages, the backend returns `400 Session question limit reached`.
 
 The response remains:
 
@@ -83,9 +83,9 @@ For non-streaming requests, the backend loads prior history, calls the provider,
 
 For streaming requests, the backend persists the user message before returning the SSE response. When streaming completes, it persists the assistant message. If the provider fails mid-stream after the user message is saved, EdgeAI persists an assistant error message so the transcript shows the failed turn and sequence numbers remain coherent.
 
-Failed persisted user turns count toward the 20-question cap.
+Failed persisted user turns count toward the 10-question cap.
 
-Existing two-message sessions are treated as one-question sessions and can be continued until they reach 20 user messages.
+Existing two-message sessions are treated as one-question sessions and can be continued until they reach 10 user messages.
 
 ## Provider Contract
 
@@ -136,13 +136,13 @@ Selecting an integration clears the active session id and current messages. Clic
 
 Sending a message no longer clears current messages. The UI appends temporary user and assistant messages, calls the streaming send API with the active `session_id` when present, then appends streamed chunks to the temporary assistant message. On completion, the frontend refreshes Recent Sessions and updates the active session id from the response.
 
-The chat UI displays a subtle user-question counter such as `7/20`. At `20/20`, the input and send button are disabled for that active session and the user is directed to start a new chat.
+The chat UI displays a subtle user-question counter such as `7/10`. At `10/10`, the input and send button are disabled for that active session and the user is directed to start a new chat.
 
 Pin selection remains available during follow-ups. Sending remains disabled once the session reaches the cap.
 
 ## Error Handling
 
-The frontend should prevent sends when the local session is at `20/20`, but the backend remains authoritative.
+The frontend should prevent sends when the local session is at `10/10`, but the backend remains authoritative.
 
 If the backend returns the session cap error, the frontend shows the same limit message and keeps the loaded transcript intact.
 
@@ -159,7 +159,7 @@ Backend tests should cover:
 - rejecting sessions owned by another user
 - rejecting sessions from another integration
 - enforcing current integration access before append
-- enforcing the 20-question cap
+- enforcing the 10-question cap
 - non-streaming persistence order on provider success and failure
 - streaming append behavior
 - streaming provider failure after user message persistence
@@ -173,11 +173,11 @@ Frontend verification should cover:
 - sending without clearing existing messages
 - selected pins on follow-ups
 - selected pins clearing after successful send
-- the `x/20` counter
-- disabled send state at `20/20`
+- the `x/10` counter
+- disabled send state at `10/10`
 
 ## Documentation
 
-`docs/developer-guide.md` must stop describing sessions as single-turn. It should document optional `session_id`, provider history, request-scoped pins, streaming persistence behavior, and the 20-question cap.
+`docs/developer-guide.md` must stop describing sessions as single-turn. It should document optional `session_id`, provider history, request-scoped pins, streaming persistence behavior, and the 10-question cap.
 
-`docs/user-guide.md` must describe follow-up questions, continuing previous sessions, the New Chat action, request-scoped pin behavior during follow-ups, and the 20-question limit.
+`docs/user-guide.md` must describe follow-up questions, continuing previous sessions, the New Chat action, request-scoped pin behavior during follow-ups, and the 10-question limit.

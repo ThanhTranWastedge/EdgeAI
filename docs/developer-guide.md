@@ -73,7 +73,7 @@ Tests use an in-memory SQLite database. The `setup_db` fixture in `conftest.py` 
 
 ### Bounded Multi-Turn Sessions
 
-Each chat session can contain up to 20 total user questions. The first request creates a `Session`; follow-up requests include `session_id` and append new `Message` rows to that same session.
+Each chat session can contain up to 10 total user questions. The first request creates a `Session`; follow-up requests include `session_id` and append new `Message` rows to that same session.
 
 The backend uses local EdgeAI messages as the source of truth for follow-up context. Before each provider call, prior `user` and `assistant` messages are loaded in sequence order and passed to the provider as `history`. Selected pinned responses are still passed separately as request-scoped `context`.
 
@@ -116,7 +116,7 @@ Authorization: Bearer <access_token>
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| `/api/chat/{integration_id}/send` | POST | User | Send message. Body: `{message, pinned_ids?, stream?, session_id?}`. Omit `session_id` to create a new session; include it to append to an existing session with fewer than 20 user questions. |
+| `/api/chat/{integration_id}/send` | POST | User | Send message. Body: `{message, pinned_ids?, stream?, session_id?}`. Omit `session_id` to create a new session; include it to append to an existing session with fewer than 10 user questions. |
 | `/api/chat/{integration_id}/sessions` | GET | User | List 100 most recent sessions |
 | `/api/chat/{integration_id}/sessions/{id}` | GET | User | Get session with messages |
 

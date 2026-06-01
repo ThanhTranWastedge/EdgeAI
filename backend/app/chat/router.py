@@ -21,7 +21,7 @@ def _serialize_refs(references) -> str | None:
     return json.dumps(references) if references else None
 
 
-MAX_USER_QUESTIONS_PER_SESSION = 20
+MAX_USER_QUESTIONS_PER_SESSION = 10
 ASSISTANT_STREAM_ERROR_MESSAGE = "Assistant response failed during streaming. Please start a new chat or try another question."
 _session_append_locks: dict[str, asyncio.Lock] = {}
 

@@ -29,7 +29,7 @@ export default function ChatWindow() {
   const [error, setError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const userQuestionCount = currentMessages.filter((m) => m.role === 'user').length
-  const questionLimitReached = userQuestionCount >= 20
+  const questionLimitReached = userQuestionCount >= 10
 
   const greetingNode = useMemo(
     () => activeIntegration?.opening_greeting
@@ -175,7 +175,7 @@ export default function ChatWindow() {
       <div className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="text-xs text-we-muted">
-            {userQuestionCount}/20
+            {userQuestionCount}/10
           </div>
           <button
             onClick={handleNewChat}
@@ -224,7 +224,7 @@ export default function ChatWindow() {
 
       {questionLimitReached && (
         <div className="px-6 pb-2 max-md:px-3 text-xs text-amcs-negative">
-          20-question limit reached. Start a new chat to continue.
+          10-question limit reached. Start a new chat to continue.
         </div>
       )}
 

@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Let EdgeAI users continue a chat session for up to 20 total user questions while preserving request-scoped pins and provider-agnostic transcript history.
+**Goal:** Let EdgeAI users continue a chat session for up to 10 total user questions while preserving request-scoped pins and provider-agnostic transcript history.
 
-**Architecture:** Keep `POST /api/chat/{integration_id}/send` as the single send endpoint and add optional `session_id` to append to an existing session. The backend will load prior local messages, pass them to providers as structured history, append new messages with sequence numbers, and enforce the 20-question cap. The frontend will track an active session id, stop clearing messages on send, expose New Chat, and show a `x/20` counter.
+**Architecture:** Keep `POST /api/chat/{integration_id}/send` as the single send endpoint and add optional `session_id` to append to an existing session. The backend will load prior local messages, pass them to providers as structured history, append new messages with sequence numbers, and enforce the 10-question cap. The frontend will track an active session id, stop clearing messages on send, expose New Chat, and show a `x/10` counter.
 
 **Tech Stack:** FastAPI, async SQLAlchemy, SQLite, pytest/httpx ASGI tests, React 19, TypeScript, Vite, Tailwind CSS, Zustand, SSE via raw `fetch()`.
 
@@ -23,7 +23,7 @@
 - Modify `frontend/src/api/chat.ts`: include optional `sessionId` in send APIs and parse EdgeAI `session_id` from streaming completion metadata.
 - Modify `frontend/src/store/chatStore.ts`: track `activeSessionId` and expose actions for loading sessions and starting a new chat.
 - Modify `frontend/src/components/SessionHistory.tsx`: set active session id when loading a session.
-- Modify `frontend/src/components/ChatWindow.tsx`: append follow-up messages, send active `session_id`, add New Chat, show counter, and disable send at `20/20`.
+- Modify `frontend/src/components/ChatWindow.tsx`: append follow-up messages, send active `session_id`, add New Chat, show counter, and disable send at `10/10`.
 - Modify `docs/developer-guide.md`: replace single-turn session documentation with bounded multi-turn behavior.
 - Modify `docs/user-guide.md`: document follow-ups, New Chat, pins during follow-ups, and the cap.
 
@@ -469,7 +469,7 @@ from app.chat.providers.base import ChatHistoryMessage
 Add these constants and helpers below `_serialize_refs`:
 
 ```python
-MAX_USER_QUESTIONS_PER_SESSION = 20
+MAX_USER_QUESTIONS_PER_SESSION = 10
 ASSISTANT_STREAM_ERROR_MESSAGE = "Assistant response failed during streaming. Please start a new chat or try another question."
 
 
@@ -704,7 +704,7 @@ async def test_append_enforces_twenty_user_question_cap(client):
         )
         session_id = first.json()["session_id"]
 
-        for index in range(2, 21):
+        for index in range(2, 11):
             ok = await client.post(
                 f"/api/chat/{iid}/send",
                 json={"message": f"q{index}", "session_id": session_id, "stream": False},
@@ -714,7 +714,7 @@ async def test_append_enforces_twenty_user_question_cap(client):
 
         capped = await client.post(
             f"/api/chat/{iid}/send",
-            json={"message": "q21", "session_id": session_id, "stream": False},
+            json={"message": "q11", "session_id": session_id, "stream": False},
             headers={"Authorization": f"Bearer {token}"},
         )
 
@@ -1236,7 +1236,7 @@ Add these constants after refs/state:
 
 ```tsx
   const userQuestionCount = currentMessages.filter((m) => m.role === 'user').length
-  const questionLimitReached = userQuestionCount >= 20
+  const questionLimitReached = userQuestionCount >= 10
 ```
 
 - [ ] **Step 4: Update send guard and remove message clearing**
@@ -1323,7 +1323,7 @@ Inside the messages container, above `<PinnedBanner ... />`, add:
 ```tsx
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="text-xs text-we-muted">
-            {userQuestionCount}/20
+            {userQuestionCount}/10
           </div>
           <button
             onClick={handleNewChat}
@@ -1341,7 +1341,7 @@ Before the input bar, add:
 ```tsx
       {questionLimitReached && (
         <div className="px-6 pb-2 max-md:px-3 text-xs text-amcs-negative">
-          20-question limit reached. Start a new chat to continue.
+          10-question limit reached. Start a new chat to continue.
         </div>
       )}
 ```
@@ -1395,7 +1395,7 @@ In `docs/developer-guide.md`, replace the `### Single-Turn Sessions` section wit
 ```markdown
 ### Bounded Multi-Turn Sessions
 
-Each chat session can contain up to 20 total user questions. The first request creates a `Session`; follow-up requests include `session_id` and append new `Message` rows to that same session.
+Each chat session can contain up to 10 total user questions. The first request creates a `Session`; follow-up requests include `session_id` and append new `Message` rows to that same session.
 
 The backend uses local EdgeAI messages as the source of truth for follow-up context. Before each provider call, prior `user` and `assistant` messages are loaded in sequence order and passed to the provider as `history`. Selected pinned responses are still passed separately as request-scoped `context`.
 
@@ -1407,7 +1407,7 @@ For non-streaming requests, the provider is called before new messages are persi
 In the Chat API reference row for `/api/chat/{integration_id}/send`, change the body description to:
 
 ```markdown
-Send message. Body: `{message, pinned_ids?, stream?, session_id?}`. Omit `session_id` to create a new session; include it to append to an existing session with fewer than 20 user questions.
+Send message. Body: `{message, pinned_ids?, stream?, session_id?}`. Omit `session_id` to create a new session; include it to append to an existing session with fewer than 10 user questions.
 ```
 
 - [ ] **Step 3: Update user guide chatting section**
@@ -1415,13 +1415,13 @@ Send message. Body: `{message, pinned_ids?, stream?, session_id?}`. Omit `sessio
 In `docs/user-guide.md`, replace the paragraph that says each message creates a new session with:
 
 ```markdown
-The first message starts a new session. You can ask follow-up questions in that same session until it reaches 20 total questions. The counter in the chat window shows your progress, such as `7/20`.
+The first message starts a new session. You can ask follow-up questions in that same session until it reaches 10 total questions. The counter in the chat window shows your progress, such as `7/10`.
 ```
 
 Add this paragraph after Viewing Past Sessions:
 
 ```markdown
-Past sessions can be continued. Click a session in Recent Sessions to load it, then send another message. If the session has reached 20 questions, the input is disabled and you can use **New Chat** to start a fresh session with the same integration.
+Past sessions can be continued. Click a session in Recent Sessions to load it, then send another message. If the session has reached 10 questions, the input is disabled and you can use **New Chat** to start a fresh session with the same integration.
 ```
 
 - [ ] **Step 4: Update pin wording**
@@ -1504,7 +1504,7 @@ In the browser at `http://localhost:5173`, verify:
 - New Chat clears the transcript without deleting history
 - selected pins can be attached to a follow-up and clear after send
 - the counter increments to match user messages
-- a 20-question session disables sending
+- a 10-question session disables sending
 
 - [ ] **Step 5: Final commit if verification changed tracked files**
 

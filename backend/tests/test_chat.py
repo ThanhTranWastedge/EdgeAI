@@ -507,7 +507,7 @@ async def test_append_rejects_session_from_another_integration(client):
 
 
 @pytest.mark.asyncio
-async def test_append_enforces_twenty_user_question_cap(client):
+async def test_append_enforces_ten_user_question_cap(client):
     token, iid = await setup_user_and_integration(client)
 
     with patch("app.chat.router.get_provider") as mock_get:
@@ -523,7 +523,7 @@ async def test_append_enforces_twenty_user_question_cap(client):
         assert first.status_code == 200
         session_id = first.json()["session_id"]
 
-        for index in range(2, 21):
+        for index in range(2, 11):
             ok = await client.post(
                 f"/api/chat/{iid}/send",
                 json={"message": f"q{index}", "session_id": session_id, "stream": False},
@@ -534,7 +534,7 @@ async def test_append_enforces_twenty_user_question_cap(client):
         mock_provider.send_message.reset_mock()
         capped = await client.post(
             f"/api/chat/{iid}/send",
-            json={"message": "q21", "session_id": session_id, "stream": False},
+            json={"message": "q11", "session_id": session_id, "stream": False},
             headers={"Authorization": f"Bearer {token}"},
         )
 
