@@ -47,7 +47,7 @@ export const sendMessageStreamApi = async (
   pinnedIds: string[] | undefined,
   sessionId: string | null | undefined,
   onChunk: (text: string) => void,
-  onDone: (refs: unknown, sessionId: string | null) => void,
+  onDone: (refs: unknown, sessionId: string | null) => void | Promise<void>,
   onError: (error: string) => void,
 ) => {
   const token = localStorage.getItem(TOKEN_KEY)
@@ -78,7 +78,7 @@ export const sendMessageStreamApi = async (
   let currentEvent = ''
   let dataLines: string[] = []
 
-  const flushEvent = () => {
+  const flushEvent = async () => {
     if (dataLines.length === 0) return
     const data = dataLines.join('\n')
     dataLines = []
@@ -87,7 +87,7 @@ export const sendMessageStreamApi = async (
       try {
         const meta = JSON.parse(data)
         if (currentEvent === 'done') {
-          onDone(meta.references, meta.session_id || null)
+          await onDone(meta.references, meta.session_id || null)
         }
         if (currentEvent === 'error' && meta.detail) {
           onError(meta.detail)
@@ -104,7 +104,7 @@ export const sendMessageStreamApi = async (
   while (true) {
     const { done, value } = await reader.read()
     if (done) {
-      flushEvent()
+      await flushEvent()
       break
     }
     buffer += decoder.decode(value, { stream: true })
@@ -114,12 +114,12 @@ export const sendMessageStreamApi = async (
     for (const rawLine of lines) {
       const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine
       if (line.startsWith('event: ')) {
-        flushEvent()
+        await flushEvent()
         currentEvent = line.slice(7)
       } else if (line.startsWith('data: ')) {
         dataLines.push(line.slice(6))
       } else if (line === '') {
-        flushEvent()
+        await flushEvent()
       }
     }
   }

@@ -8,7 +8,7 @@ interface Props {
 }
 
 export default function SessionHistory({ collapsed }: Props) {
-  const { activeIntegration, sessions, setSessions, setCurrentMessages } = useChatStore()
+  const { activeIntegration, sessions, setSessions, setCurrentMessages, isStreaming } = useChatStore()
 
   useEffect(() => {
     if (activeIntegration) {
@@ -17,7 +17,7 @@ export default function SessionHistory({ collapsed }: Props) {
   }, [activeIntegration, setSessions])
 
   const viewSession = async (sessionId: string) => {
-    if (!activeIntegration) return
+    if (!activeIntegration || isStreaming) return
     const { data } = await getSessionApi(activeIntegration.id, sessionId)
     setCurrentMessages(data.messages, data.id)
   }
@@ -35,7 +35,11 @@ export default function SessionHistory({ collapsed }: Props) {
         <div
           key={s.id}
           onClick={() => viewSession(s.id)}
-          className="px-3 py-1 mx-1 rounded text-[11px] text-white cursor-pointer hover:text-white/80 transition-colors truncate"
+          className={`px-3 py-1 mx-1 rounded text-[11px] text-white transition-colors truncate ${
+            isStreaming
+              ? 'opacity-50 cursor-not-allowed'
+              : 'cursor-pointer hover:text-white/80'
+          }`}
         >
           {s.title}
         </div>

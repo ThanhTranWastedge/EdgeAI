@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import Markdown from 'react-markdown'
 import { useChatStore } from '../store/chatStore'
 import { usePinStore } from '../store/pinStore'
-import { sendMessageStreamApi, getSessionsApi } from '../api/chat'
+import { sendMessageStreamApi, getSessionsApi, getSessionApi } from '../api/chat'
 import MessageBubble from './MessageBubble'
 import PinnedBanner from './PinnedBanner'
 import PinSelector from './PinSelector'
@@ -17,9 +17,10 @@ export default function ChatWindow() {
     startNewChat,
     setActiveSessionId,
     setSessions,
+    setCurrentMessages,
     isStreaming,
     setStreaming,
-    updateLastMessage,
+    updateMessageContent,
   } = useChatStore()
   const { selectedPins, removeSelectedPin, clearSelectedPins } = usePinStore()
   const [input, setInput] = useState('')
@@ -50,10 +51,12 @@ export default function ChatWindow() {
   }
 
   const handleNewChat = () => {
+    if (isStreaming) return
     startNewChat()
     clearSelectedPins()
     setError('')
     setInput('')
+    setShowPinSelector(false)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
 
@@ -62,8 +65,11 @@ export default function ChatWindow() {
     setError('')
 
     const nextSequence = currentMessages.reduce((max, message) => Math.max(max, message.sequence), 0) + 1
+    const timestamp = Date.now()
+    const assistantTempId = `temp-assistant-${timestamp}`
+    const integrationId = activeIntegration.id
     const userMsg = {
-      id: `temp-user-${Date.now()}`,
+      id: `temp-user-${timestamp}`,
       role: 'user',
       content: input,
       references: null,
@@ -73,7 +79,7 @@ export default function ChatWindow() {
     addMessage(userMsg)
 
     const assistantMsg = {
-      id: `temp-assistant-${Date.now()}`,
+      id: assistantTempId,
       role: 'assistant',
       content: '',
       references: null,
@@ -90,23 +96,42 @@ export default function ChatWindow() {
 
     try {
       await sendMessageStreamApi(
-        activeIntegration.id,
+        integrationId,
         message,
         pinnedIds.length > 0 ? pinnedIds : undefined,
         activeSessionId,
         (chunk) => {
-          updateLastMessage((prev) => prev + chunk)
+          updateMessageContent(assistantTempId, (prev) => prev + chunk)
         },
         async (_refs, returnedSessionId) => {
+          const isCurrentMessage = useChatStore
+            .getState()
+            .currentMessages.some((m) => m.id === assistantTempId)
+          if (!isCurrentMessage) return
+
           if (returnedSessionId) {
             setActiveSessionId(returnedSessionId)
+            const { data } = await getSessionApi(integrationId, returnedSessionId)
+            const stillCurrentMessage = useChatStore
+              .getState()
+              .currentMessages.some((m) => m.id === assistantTempId)
+            if (!stillCurrentMessage) return
+
+            setCurrentMessages(data.messages, data.id)
           }
           clearSelectedPins()
-          const sessionsRes = await getSessionsApi(activeIntegration.id)
-          setSessions(sessionsRes.data)
+          const sessionsRes = await getSessionsApi(integrationId)
+          if (useChatStore.getState().activeIntegration?.id === integrationId) {
+            setSessions(sessionsRes.data)
+          }
         },
         (errorMsg) => {
-          setError(errorMsg)
+          const isCurrentMessage = useChatStore
+            .getState()
+            .currentMessages.some((m) => m.id === assistantTempId)
+          if (isCurrentMessage) {
+            setError(errorMsg)
+          }
         },
       )
     } catch {
@@ -142,7 +167,8 @@ export default function ChatWindow() {
           </div>
           <button
             onClick={handleNewChat}
-            className="text-xs font-medium text-amcs-primary hover:text-amcs-primary/80 transition-colors"
+            disabled={isStreaming}
+            className="text-xs font-medium text-amcs-primary hover:text-amcs-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             New Chat
           </button>

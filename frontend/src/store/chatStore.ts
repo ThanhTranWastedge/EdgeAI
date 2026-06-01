@@ -13,6 +13,7 @@ interface ChatState {
   setSessions: (sessions: SessionData[]) => void
   setCurrentMessages: (messages: MessageData[], sessionId?: string | null) => void
   addMessage: (message: MessageData) => void
+  updateMessageContent: (messageId: string, updater: (prevContent: string) => string) => void
   updateLastMessage: (updater: (prevContent: string) => string) => void
   setStreaming: (streaming: boolean) => void
   clearMessages: () => void
@@ -38,6 +39,15 @@ export const useChatStore = create<ChatState>((set) => ({
     activeSessionId: sessionId,
   }),
   addMessage: (message) => set((state) => ({ currentMessages: [...state.currentMessages, message] })),
+  updateMessageContent: (messageId, updater) => set((state) => {
+    const messageIndex = state.currentMessages.findIndex((message) => message.id === messageId)
+    if (messageIndex === -1) return state
+
+    const currentMessages = [...state.currentMessages]
+    const message = currentMessages[messageIndex]
+    currentMessages[messageIndex] = { ...message, content: updater(message.content) }
+    return { currentMessages }
+  }),
   updateLastMessage: (updater) => set((state) => {
     const msgs = [...state.currentMessages]
     if (msgs.length > 0) {
