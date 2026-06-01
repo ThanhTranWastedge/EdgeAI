@@ -1,5 +1,6 @@
 import json
 import logging
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +23,15 @@ def _serialize_refs(references) -> str | None:
 
 MAX_USER_QUESTIONS_PER_SESSION = 20
 ASSISTANT_STREAM_ERROR_MESSAGE = "Assistant response failed during streaming. Please start a new chat or try another question."
+_session_append_locks: dict[str, asyncio.Lock] = {}
+
+
+def _get_session_append_lock(session_id: str) -> asyncio.Lock:
+    lock = _session_append_locks.get(session_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _session_append_locks[session_id] = lock
+    return lock
 
 
 async def _ensure_integration_access(db: AsyncSession, user: User, integration_id: str) -> None:
@@ -133,17 +143,65 @@ async def send_message(
         pins = pin_result.scalars().all()
         context = [p.content for p in pins]
 
-    existing_session, history, next_sequence = await _prepare_session_for_send(
-        db, user, integration_id, body
-    )
+    append_lock = _get_session_append_lock(body.session_id) if body.session_id else None
+    if append_lock:
+        await append_lock.acquire()
 
-    if body.stream:
+    try:
+        existing_session, history, next_sequence = await _prepare_session_for_send(
+            db, user, integration_id, body
+        )
+
+        if body.stream:
+            if existing_session:
+                session = existing_session
+                user_sequence = next_sequence or 1
+            else:
+                title = body.message[:80] + ("..." if len(body.message) > 80 else "")
+                session = Session(user_id=user.id, integration_id=integration_id, title=title)
+                db.add(session)
+                await db.flush()
+                user_sequence = 1
+
+            user_msg = Message(
+                session_id=session.id,
+                role="user",
+                content=body.message,
+                sequence=user_sequence,
+            )
+            db.add(user_msg)
+            await db.commit()
+            response = await _stream_response(
+                integration,
+                session.id,
+                body.message,
+                context,
+                history,
+                user_sequence + 1,
+                append_lock=append_lock,
+            )
+            append_lock = None
+            return response
+
+        # Non-streaming: call provider before persisting
+        provider = get_provider(integration)
+        try:
+            response = await provider.send_message(body.message, context=context, history=history)
+        except Exception as e:
+            logger.error(f"Provider error: {e}")
+            raise HTTPException(status_code=502, detail="Chat provider is unavailable")
+
         if existing_session:
             session = existing_session
             user_sequence = next_sequence or 1
         else:
             title = body.message[:80] + ("..." if len(body.message) > 80 else "")
-            session = Session(user_id=user.id, integration_id=integration_id, title=title)
+            session = Session(
+                user_id=user.id,
+                integration_id=integration_id,
+                title=title,
+                ragflow_session_id=response.provider_session_id,
+            )
             db.add(session)
             await db.flush()
             user_sequence = 1
@@ -154,63 +212,26 @@ async def send_message(
             content=body.message,
             sequence=user_sequence,
         )
-        db.add(user_msg)
+        assistant_msg = Message(
+            session_id=session.id,
+            role="assistant",
+            content=response.content,
+            references=_serialize_refs(response.references),
+            sequence=user_sequence + 1,
+        )
+        if response.provider_session_id:
+            session.ragflow_session_id = response.provider_session_id
+        db.add_all([user_msg, assistant_msg])
         await db.commit()
-        return await _stream_response(
-            integration,
-            session.id,
-            body.message,
-            context,
-            history,
-            user_sequence + 1,
+        await db.refresh(assistant_msg)
+
+        return SendMessageResponse(
+            session_id=session.id,
+            assistant_message=MessageResponse.model_validate(assistant_msg),
         )
-
-    # Non-streaming: call provider before persisting
-    provider = get_provider(integration)
-    try:
-        response = await provider.send_message(body.message, context=context, history=history)
-    except Exception as e:
-        logger.error(f"Provider error: {e}")
-        raise HTTPException(status_code=502, detail="Chat provider is unavailable")
-
-    if existing_session:
-        session = existing_session
-        user_sequence = next_sequence or 1
-    else:
-        title = body.message[:80] + ("..." if len(body.message) > 80 else "")
-        session = Session(
-            user_id=user.id,
-            integration_id=integration_id,
-            title=title,
-            ragflow_session_id=response.provider_session_id,
-        )
-        db.add(session)
-        await db.flush()
-        user_sequence = 1
-
-    user_msg = Message(
-        session_id=session.id,
-        role="user",
-        content=body.message,
-        sequence=user_sequence,
-    )
-    assistant_msg = Message(
-        session_id=session.id,
-        role="assistant",
-        content=response.content,
-        references=_serialize_refs(response.references),
-        sequence=user_sequence + 1,
-    )
-    if response.provider_session_id:
-        session.ragflow_session_id = response.provider_session_id
-    db.add_all([user_msg, assistant_msg])
-    await db.commit()
-    await db.refresh(assistant_msg)
-
-    return SendMessageResponse(
-        session_id=session.id,
-        assistant_message=MessageResponse.model_validate(assistant_msg),
-    )
+    finally:
+        if append_lock:
+            append_lock.release()
 
 
 async def _stream_response(
@@ -220,6 +241,7 @@ async def _stream_response(
     context,
     history,
     assistant_sequence,
+    append_lock=None,
 ):
     """Return SSE streaming response. Saves full message to DB after stream completes."""
     from sse_starlette.sse import EventSourceResponse
@@ -233,48 +255,52 @@ async def _stream_response(
         assistant_saved = False
 
         try:
-            chunk_count = 0
-            async for chunk in provider.stream_message(message, context=context, history=history):
-                if chunk.done:
-                    references = chunk.references
-                    provider_session_id = chunk.provider_session_id
-                    logger.debug(f"Stream complete: {chunk_count} chunks, {len(full_content)} chars")
-                    await _save_stream_assistant_message(
-                        session_id,
-                        full_content,
-                        references,
-                        assistant_sequence,
-                        provider_session_id,
-                    )
-                    assistant_saved = True
-                    yield {"event": "done", "data": json.dumps({
-                        "references": references,
-                        "provider_session_id": provider_session_id,
-                        "session_id": session_id,
-                    })}
-                else:
-                    chunk_count += 1
-                    full_content += chunk.content
-                    yield {"data": chunk.content}
-        except Exception as e:
-            logger.error(f"Stream error after {chunk_count} chunks ({len(full_content)} chars): {e}")
-            await _save_stream_assistant_message(
-                session_id,
-                ASSISTANT_STREAM_ERROR_MESSAGE,
-                None,
-                assistant_sequence,
-            )
-            yield {"event": "error", "data": json.dumps({"detail": "Provider error during streaming"})}
-            return
+            try:
+                chunk_count = 0
+                async for chunk in provider.stream_message(message, context=context, history=history):
+                    if chunk.done:
+                        references = chunk.references
+                        provider_session_id = chunk.provider_session_id
+                        logger.debug(f"Stream complete: {chunk_count} chunks, {len(full_content)} chars")
+                        await _save_stream_assistant_message(
+                            session_id,
+                            full_content,
+                            references,
+                            assistant_sequence,
+                            provider_session_id,
+                        )
+                        assistant_saved = True
+                        yield {"event": "done", "data": json.dumps({
+                            "references": references,
+                            "provider_session_id": provider_session_id,
+                            "session_id": session_id,
+                        })}
+                    else:
+                        chunk_count += 1
+                        full_content += chunk.content
+                        yield {"data": chunk.content}
+            except Exception as e:
+                logger.error(f"Stream error after {chunk_count} chunks ({len(full_content)} chars): {e}")
+                await _save_stream_assistant_message(
+                    session_id,
+                    ASSISTANT_STREAM_ERROR_MESSAGE,
+                    None,
+                    assistant_sequence,
+                )
+                yield {"event": "error", "data": json.dumps({"detail": "Provider error during streaming"})}
+                return
 
-        if not assistant_saved:
-            await _save_stream_assistant_message(
-                session_id,
-                full_content,
-                references,
-                assistant_sequence,
-                provider_session_id,
-            )
+            if not assistant_saved:
+                await _save_stream_assistant_message(
+                    session_id,
+                    full_content,
+                    references,
+                    assistant_sequence,
+                    provider_session_id,
+                )
+        finally:
+            if append_lock:
+                append_lock.release()
 
     return EventSourceResponse(event_generator())
 

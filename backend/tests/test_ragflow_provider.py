@@ -171,3 +171,32 @@ def test_extract_references_preserves_ragflow_chunk_dicts():
     ]
 
     assert provider._extract_references(message) == message.reference
+
+
+@pytest.mark.asyncio
+async def test_ragflow_stream_message_raises_when_stream_ask_raises():
+    provider = RagflowProvider({
+        "base_url": "http://localhost:9380",
+        "api_key": "ragflow-key",
+        "chat_id": "chat-uuid",
+        "type": "chat",
+    })
+
+    mock_session = MagicMock()
+    mock_session.id = "session-123"
+
+    def failing_ask(question, stream=False):
+        raise RuntimeError("ragflow stream failed")
+
+    mock_session.ask = failing_ask
+
+    mock_chat = MagicMock()
+    mock_chat.create_session.return_value = mock_session
+
+    mock_rag = MagicMock()
+    mock_rag.list_chats.return_value = [mock_chat]
+
+    with patch("app.chat.providers.ragflow.RAGFlow", return_value=mock_rag):
+        with pytest.raises(RuntimeError, match="ragflow stream failed"):
+            async for _ in provider.stream_message("question"):
+                pass

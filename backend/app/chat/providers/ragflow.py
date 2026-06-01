@@ -106,7 +106,11 @@ class RagflowProvider(ChatProvider):
         session = entity.create_session()
         question = self._build_question(message, context, history)
 
-        queue: asyncio.Queue[StreamChunk | None] = asyncio.Queue()
+        queue: asyncio.Queue[StreamChunk | Exception] = asyncio.Queue()
+        loop = asyncio.get_event_loop()
+
+        def _enqueue(item: StreamChunk | Exception) -> None:
+            loop.call_soon_threadsafe(queue.put_nowait, item)
 
         def _stream_sync():
             last_content = ""
@@ -122,30 +126,21 @@ class RagflowProvider(ChatProvider):
                     last_content = content
                     last_chunk = chunk
                     if new_text:
-                        queue.put_nowait(StreamChunk(content=new_text))
+                        _enqueue(StreamChunk(content=new_text))
+                references = self._extract_references(last_chunk) if last_chunk else None
+                _enqueue(StreamChunk(
+                    content="", done=True, references=references,
+                    provider_session_id=session.id,
+                ))
             except Exception as e:
-                queue.put_nowait(StreamChunk(content=str(e), done=True))
-                return
-            references = self._extract_references(last_chunk) if last_chunk else None
-            queue.put_nowait(StreamChunk(
-                content="", done=True, references=references,
-                provider_session_id=session.id,
-            ))
+                _enqueue(e)
 
-        loop = asyncio.get_event_loop()
-        task = loop.run_in_executor(None, _stream_sync)
+        loop.run_in_executor(None, _stream_sync)
 
         while True:
-            # Wait for either a chunk or the thread to finish
-            try:
-                chunk = await asyncio.wait_for(queue.get(), timeout=0.1)
-                yield chunk
-                if chunk.done:
-                    break
-            except asyncio.TimeoutError:
-                if task.done():
-                    # Drain remaining items
-                    while not queue.empty():
-                        chunk = queue.get_nowait()
-                        yield chunk
-                    break
+            chunk = await queue.get()
+            if isinstance(chunk, Exception):
+                raise chunk
+            yield chunk
+            if chunk.done:
+                break

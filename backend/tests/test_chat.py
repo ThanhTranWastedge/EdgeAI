@@ -1,9 +1,20 @@
+import asyncio
 import pytest
 import json
 import uuid
 from unittest.mock import patch, AsyncMock, MagicMock
 from app.auth.utils import hash_password
 from app.chat.providers.base import ChatResponse
+
+
+def parse_sse_done_data(response_text):
+    current_event = None
+    for line in response_text.splitlines():
+        if line.startswith("event:"):
+            current_event = line.removeprefix("event:").strip()
+        elif current_event == "done" and line.startswith("data:"):
+            return json.loads(line.removeprefix("data:").strip())
+    pytest.fail("SSE response did not include a done event")
 
 
 async def setup_user_and_integration(client):
@@ -122,7 +133,7 @@ async def test_streaming_send_appends_and_returns_session_id(client):
             headers={"Authorization": f"Bearer {token}"},
         )
         first_body = first.text
-        session_id = first_body.split('"session_id": "')[1].split('"')[0]
+        session_id = parse_sse_done_data(first_body)["session_id"]
 
         second = await client.post(
             f"/api/chat/{iid}/send",
@@ -136,6 +147,77 @@ async def test_streaming_send_appends_and_returns_session_id(client):
         {"role": "user", "content": "stream q1"},
         {"role": "assistant", "content": "streamed answer"},
     ]
+
+
+@pytest.mark.asyncio
+async def test_concurrent_non_streaming_appends_are_serialized_with_complete_history(client):
+    token, iid = await setup_user_and_integration(client)
+    call_histories = {}
+
+    async def fake_send(message, context=None, history=None):
+        call_histories[message] = list(history or [])
+        if message.startswith("append"):
+            await asyncio.sleep(0.05)
+        return ChatResponse(content=f"answer for {message}", references=None, provider_session_id=None)
+
+    with patch("app.chat.router.get_provider") as mock_get:
+        mock_provider = AsyncMock()
+        mock_provider.send_message.side_effect = fake_send
+        mock_get.return_value = mock_provider
+
+        first = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "initial", "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert first.status_code == 200
+        session_id = first.json()["session_id"]
+
+        first_append, second_append = await asyncio.gather(
+            client.post(
+                f"/api/chat/{iid}/send",
+                json={"message": "append 1", "session_id": session_id, "stream": False},
+                headers={"Authorization": f"Bearer {token}"},
+            ),
+            client.post(
+                f"/api/chat/{iid}/send",
+                json={"message": "append 2", "session_id": session_id, "stream": False},
+                headers={"Authorization": f"Bearer {token}"},
+            ),
+        )
+
+    assert first_append.status_code == 200
+    assert second_append.status_code == 200
+
+    detail = await client.get(
+        f"/api/chat/{iid}/sessions/{session_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    messages = detail.json()["messages"]
+    assert [m["sequence"] for m in messages] == [1, 2, 3, 4, 5, 6]
+    assert len({m["sequence"] for m in messages}) == 6
+
+    append_1_history = call_histories["append 1"]
+    append_2_history = call_histories["append 2"]
+    assert sorted(len(history) for history in (append_1_history, append_2_history)) == [2, 4]
+
+    first_history = append_1_history if len(append_1_history) == 2 else append_2_history
+    later_history = append_1_history if len(append_1_history) == 4 else append_2_history
+    assert first_history == [
+        {"role": "user", "content": "initial"},
+        {"role": "assistant", "content": "answer for initial"},
+    ]
+    assert later_history[:2] == first_history
+    assert later_history[2:] in (
+        [
+            {"role": "user", "content": "append 1"},
+            {"role": "assistant", "content": "answer for append 1"},
+        ],
+        [
+            {"role": "user", "content": "append 2"},
+            {"role": "assistant", "content": "answer for append 2"},
+        ],
+    )
 
 
 @pytest.mark.asyncio
