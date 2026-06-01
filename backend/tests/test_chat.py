@@ -17,6 +17,25 @@ def parse_sse_done_data(response_text):
     pytest.fail("SSE response did not include a done event")
 
 
+def parse_sse_events(response_text):
+    events = []
+    current_event = "message"
+    for line in response_text.splitlines():
+        if line.startswith("event:"):
+            current_event = line.removeprefix("event:").strip()
+        elif line.startswith("data:"):
+            events.append((current_event, line.removeprefix("data:").strip()))
+            current_event = "message"
+    return events
+
+
+def reset_sse_app_status():
+    from sse_starlette.sse import AppStatus
+
+    AppStatus.should_exit = False
+    AppStatus.should_exit_event = None
+
+
 async def setup_user_and_integration(client):
     from tests.conftest import TestingSessionLocal
     from app.models import User, Integration
@@ -299,6 +318,139 @@ async def test_stream_done_event_waits_until_assistant_message_is_persisted(clie
                 break
         else:
             pytest.fail("Stream did not yield done event")
+
+
+@pytest.mark.asyncio
+async def test_stream_exception_persists_error_assistant_and_emits_error_event(client):
+    from app.chat.router import ASSISTANT_STREAM_ERROR_MESSAGE
+    from app.models import Message
+    from sqlalchemy import select
+    from tests.conftest import TestingSessionLocal
+
+    token, iid = await setup_user_and_integration(client)
+    user_message_was_persisted_before_stream_error = False
+    reset_sse_app_status()
+
+    async def failing_stream(message, context=None, history=None):
+        nonlocal user_message_was_persisted_before_stream_error
+        async with TestingSessionLocal() as db:
+            result = await db.execute(
+                select(Message).where(
+                    Message.role == "user",
+                    Message.content == "stream failure question",
+                )
+            )
+            user_message_was_persisted_before_stream_error = result.scalar_one_or_none() is not None
+        raise RuntimeError("provider stream failed")
+        yield
+
+    with (
+        patch("app.chat.router.get_provider") as mock_get,
+        patch("app.database.async_session", TestingSessionLocal),
+    ):
+        mock_provider = MagicMock()
+        mock_provider.stream_message = failing_stream
+        mock_get.return_value = mock_provider
+
+        response = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "stream failure question", "stream": True},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+    assert user_message_was_persisted_before_stream_error is True
+    events = parse_sse_events(response.text)
+    assert ("error", json.dumps({"detail": "Provider error during streaming"})) in events
+    assert all(event_name != "done" for event_name, _ in events)
+
+    async with TestingSessionLocal() as db:
+        result = await db.execute(select(Message).order_by(Message.sequence))
+        messages = result.scalars().all()
+
+    assert [(message.role, message.content, message.sequence) for message in messages] == [
+        ("user", "stream failure question", 1),
+        ("assistant", ASSISTANT_STREAM_ERROR_MESSAGE, 2),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_streaming_append_lock_blocks_second_history_until_first_assistant_persists(client):
+    from tests.conftest import TestingSessionLocal
+
+    token, iid = await setup_user_and_integration(client)
+    release_first_stream = asyncio.Event()
+    first_stream_started = asyncio.Event()
+    second_history_captured = asyncio.Event()
+    stream_histories = {}
+    reset_sse_app_status()
+
+    async def fake_stream(message, context=None, history=None):
+        stream_histories[message] = list(history or [])
+        if message == "stream append 1":
+            first_stream_started.set()
+            yield type("Chunk", (), {"content": "first streamed ", "done": False})()
+            await release_first_stream.wait()
+            yield type("Chunk", (), {"content": "assistant", "done": False})()
+            yield type("Chunk", (), {"content": "", "done": True, "references": None, "provider_session_id": None})()
+        elif message == "stream append 2":
+            second_history_captured.set()
+            yield type("Chunk", (), {"content": "second assistant", "done": False})()
+            yield type("Chunk", (), {"content": "", "done": True, "references": None, "provider_session_id": None})()
+        else:
+            raise AssertionError(f"Unexpected streamed message: {message}")
+
+    with patch("app.chat.router.get_provider") as mock_get:
+        mock_provider = AsyncMock()
+        mock_provider.send_message.return_value = ChatResponse(content="initial answer", references=None, provider_session_id=None)
+        mock_get.return_value = mock_provider
+
+        first = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "initial", "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert first.status_code == 200
+        session_id = first.json()["session_id"]
+
+    with (
+        patch("app.chat.router.get_provider") as mock_get,
+        patch("app.database.async_session", TestingSessionLocal),
+    ):
+        mock_provider = MagicMock()
+        mock_provider.stream_message = fake_stream
+        mock_get.return_value = mock_provider
+
+        first_append_task = asyncio.create_task(client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "stream append 1", "session_id": session_id, "stream": True},
+            headers={"Authorization": f"Bearer {token}"},
+        ))
+        await first_stream_started.wait()
+
+        second_append_task = asyncio.create_task(client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "stream append 2", "session_id": session_id, "stream": True},
+            headers={"Authorization": f"Bearer {token}"},
+        ))
+        await asyncio.sleep(0)
+
+        assert "stream append 2" not in stream_histories
+        assert second_history_captured.is_set() is False
+
+        release_first_stream.set()
+        first_append, second_append = await asyncio.gather(first_append_task, second_append_task)
+
+    assert first_append.status_code == 200
+    assert second_append.status_code == 200
+    assert parse_sse_done_data(first_append.text)["session_id"] == session_id
+    assert parse_sse_done_data(second_append.text)["session_id"] == session_id
+    assert stream_histories["stream append 2"] == [
+        {"role": "user", "content": "initial"},
+        {"role": "assistant", "content": "initial answer"},
+        {"role": "user", "content": "stream append 1"},
+        {"role": "assistant", "content": "first streamed assistant"},
+    ]
 
 
 @pytest.mark.asyncio
