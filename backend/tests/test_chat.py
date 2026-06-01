@@ -96,6 +96,184 @@ async def test_send_message_appends_to_existing_session_with_history(client):
 
 
 @pytest.mark.asyncio
+async def test_append_rejects_session_from_another_integration(client):
+    token, iid = await setup_user_and_integration(client)
+    from tests.conftest import TestingSessionLocal
+    from app.models import Integration
+    from sqlalchemy import select
+
+    other_iid = str(uuid.uuid4())
+    async with TestingSessionLocal() as db:
+        owner_result = await db.execute(select(Integration.updated_by).where(Integration.id == iid))
+        owner_id = owner_result.scalar_one()
+        other = Integration(
+            id=other_iid,
+            name="Other Chat",
+            provider_type="openai_compatible",
+            provider_config=json.dumps({"base_url": "http://x", "api_key": "k", "model": "m"}),
+            updated_by=owner_id,
+        )
+        db.add(other)
+        await db.commit()
+
+    mock_response = ChatResponse(content="First answer", references=None, provider_session_id=None)
+    with patch("app.chat.router.get_provider") as mock_get:
+        mock_provider = AsyncMock()
+        mock_provider.send_message.return_value = mock_response
+        mock_get.return_value = mock_provider
+        first = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "First question", "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    response = await client.post(
+        f"/api/chat/{other_iid}/send",
+        json={"message": "Bad append", "session_id": first.json()["session_id"], "stream": False},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Session not found"
+
+
+@pytest.mark.asyncio
+async def test_append_enforces_twenty_user_question_cap(client):
+    token, iid = await setup_user_and_integration(client)
+
+    with patch("app.chat.router.get_provider") as mock_get:
+        mock_provider = AsyncMock()
+        mock_provider.send_message.return_value = ChatResponse(content="answer", references=None, provider_session_id=None)
+        mock_get.return_value = mock_provider
+
+        first = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "q1", "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        session_id = first.json()["session_id"]
+
+        for index in range(2, 21):
+            ok = await client.post(
+                f"/api/chat/{iid}/send",
+                json={"message": f"q{index}", "session_id": session_id, "stream": False},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert ok.status_code == 200
+
+        capped = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "q21", "session_id": session_id, "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert capped.status_code == 400
+    assert capped.json()["detail"] == "Session question limit reached"
+
+
+@pytest.mark.asyncio
+async def test_append_rejects_session_owned_by_another_user(client):
+    token, iid = await setup_user_and_integration(client)
+    from tests.conftest import TestingSessionLocal
+    from app.models import User
+
+    other_uid = str(uuid.uuid4())
+    async with TestingSessionLocal() as db:
+        other_user = User(
+            id=other_uid,
+            username="other-chat-user",
+            password_hash=hash_password("p"),
+            role="admin",
+        )
+        db.add(other_user)
+        await db.commit()
+
+    other_login = await client.post(
+        "/api/auth/login",
+        json={"username": "other-chat-user", "password": "p"},
+    )
+    other_token = other_login.json()["access_token"]
+
+    with patch("app.chat.router.get_provider") as mock_get:
+        mock_provider = AsyncMock()
+        mock_provider.send_message.return_value = ChatResponse(content="answer", references=None, provider_session_id=None)
+        mock_get.return_value = mock_provider
+
+        first = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "owner question", "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        rejected = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "intruder question", "session_id": first.json()["session_id"], "stream": False},
+            headers={"Authorization": f"Bearer {other_token}"},
+        )
+
+    assert rejected.status_code == 404
+    assert rejected.json()["detail"] == "Session not found"
+
+
+@pytest.mark.asyncio
+async def test_append_requires_current_user_integration_access(client):
+    from tests.conftest import TestingSessionLocal
+    from app.models import User, Integration, UserIntegrationAccess
+    from app.constants import ROLE_USER
+    from sqlalchemy import delete
+
+    uid = str(uuid.uuid4())
+    iid = str(uuid.uuid4())
+    access_id = str(uuid.uuid4())
+    async with TestingSessionLocal() as db:
+        user = User(id=uid, username="limited-user", password_hash=hash_password("p"), role=ROLE_USER)
+        integration = Integration(
+            id=iid,
+            name="Limited Chat",
+            provider_type="openai_compatible",
+            provider_config=json.dumps({"base_url": "http://x", "api_key": "k", "model": "m"}),
+            updated_by=uid,
+        )
+        access = UserIntegrationAccess(
+            id=access_id,
+            user_id=uid,
+            integration_id=iid,
+            granted_by=uid,
+        )
+        db.add_all([user, integration, access])
+        await db.commit()
+
+    login = await client.post("/api/auth/login", json={"username": "limited-user", "password": "p"})
+    token = login.json()["access_token"]
+
+    with patch("app.chat.router.get_provider") as mock_get:
+        mock_provider = AsyncMock()
+        mock_provider.send_message.return_value = ChatResponse(content="answer", references=None, provider_session_id=None)
+        mock_get.return_value = mock_provider
+
+        first = await client.post(
+            f"/api/chat/{iid}/send",
+            json={"message": "first", "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert first.status_code == 200
+        session_id = first.json()["session_id"]
+
+    async with TestingSessionLocal() as db:
+        await db.execute(delete(UserIntegrationAccess).where(UserIntegrationAccess.id == access_id))
+        await db.commit()
+
+    denied = await client.post(
+        f"/api/chat/{iid}/send",
+        json={"message": "second", "session_id": session_id, "stream": False},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert denied.status_code == 403
+    assert denied.json()["detail"] == "No access to this integration"
+
+
+@pytest.mark.asyncio
 async def test_list_sessions(client):
     token, iid = await setup_user_and_integration(client)
 
