@@ -31,6 +31,9 @@ class RagflowProvider(ChatProvider):
         context: list[str] | None = None,
         history: list[ChatHistoryMessage] | None = None,
     ) -> str:
+        if not context and not history:
+            return message
+
         parts = []
         if context:
             parts.extend(f"[Injected context]: {c}" for c in context)

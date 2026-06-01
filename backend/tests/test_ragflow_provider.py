@@ -69,6 +69,16 @@ async def test_ragflow_send_with_context_prepends():
         assert "my question" in captured_question
 
 
+def test_ragflow_build_question_without_context_or_history_preserves_raw_message():
+    provider = RagflowProvider({
+        "base_url": "http://localhost:9380",
+        "api_key": "ragflow-key",
+        "chat_id": "chat-uuid",
+    })
+
+    assert provider._build_question("plain question") == "plain question"
+
+
 @pytest.mark.asyncio
 async def test_ragflow_send_with_history_builds_transcript_before_latest_question():
     config = {
