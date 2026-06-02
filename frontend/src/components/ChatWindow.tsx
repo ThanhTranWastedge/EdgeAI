@@ -208,6 +208,7 @@ export default function ChatWindow() {
           if (returnedSessionId) {
             const refreshResult = await refreshPersistedSessionState(returnedSessionId)
             if (refreshResult === 'not-visible') return
+            clearSelectedPins()
             if (refreshResult === 'refreshed') setError(errorMsg)
           } else {
             removeMessages([userTempId, assistantTempId])

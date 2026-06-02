@@ -87,8 +87,16 @@ All AI providers implement `ChatProvider` (in `app/chat/providers/base.py`):
 
 ```python
 class ChatProvider(ABC):
-    async def send_message(message: str, context: list[str] | None) -> ChatResponse
-    async def stream_message(message: str, context: list[str] | None) -> AsyncGenerator[StreamChunk, None]
+    async def send_message(
+        message: str,
+        context: list[str] | None,
+        history: list[ChatHistoryMessage] | None,
+    ) -> ChatResponse
+    async def stream_message(
+        message: str,
+        context: list[str] | None,
+        history: list[ChatHistoryMessage] | None,
+    ) -> AsyncGenerator[StreamChunk, None]
 ```
 
 The `context` parameter carries pinned response content for cross-chat injection. Providers prepend it to the user's question.

@@ -2,6 +2,7 @@ import asyncio
 import pytest
 import json
 import uuid
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, AsyncMock, MagicMock
 from app.auth.utils import hash_password
 from app.chat.providers.base import ChatResponse
@@ -834,6 +835,74 @@ async def test_new_send_routes_support_mixed_target_followups(client):
 
 
 @pytest.mark.asyncio
+async def test_migrated_rows_infer_missing_target_metadata_for_detail_and_history(client):
+    from tests.conftest import TestingSessionLocal
+    from app.models import Message, Session, User
+    from sqlalchemy import select
+
+    token, first_id, second_id = await setup_user_with_two_integrations(client)
+
+    async with TestingSessionLocal() as db:
+        user = (await db.execute(select(User).where(User.username == "mixeduser"))).scalar_one()
+        session = Session(
+            id=str(uuid.uuid4()),
+            user_id=user.id,
+            integration_id=first_id,
+            title="legacy session",
+        )
+        db.add(session)
+        await db.flush()
+        db.add_all([
+            Message(
+                session_id=session.id,
+                role="user",
+                content="legacy question",
+                sequence=1,
+            ),
+            Message(
+                session_id=session.id,
+                role="assistant",
+                content="legacy answer",
+                sequence=2,
+            ),
+        ])
+        await db.commit()
+        session_id = session.id
+
+    detail = await client.get(
+        f"/api/chat/sessions/{session_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert detail.status_code == 200
+    data = detail.json()
+    assert data["integration_name"] == "First Chat"
+    assert data["last_integration_id"] == first_id
+    assert data["last_integration_name"] == "First Chat"
+    assert [(m["content"], m["integration_id"], m["integration_name"]) for m in data["messages"]] == [
+        ("legacy question", first_id, "First Chat"),
+        ("legacy answer", first_id, "First Chat"),
+    ]
+
+    with patch("app.chat.router.get_provider") as mock_get:
+        mock_provider = AsyncMock()
+        mock_provider.send_message.return_value = ChatResponse(content="new answer", references=None, provider_session_id=None)
+        mock_get.return_value = mock_provider
+
+        response = await client.post(
+            f"/api/chat/sessions/{session_id}/send",
+            json={"integration_id": second_id, "message": "follow-up", "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+    assert mock_provider.send_message.call_args.kwargs["history"] == [
+        {"role": "user", "content": "legacy question"},
+        {"role": "assistant", "content": "Assistant (First Chat): legacy answer"},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_global_session_send_rejects_session_owned_by_another_user(client):
     from tests.conftest import TestingSessionLocal
     from app.models import User
@@ -1010,3 +1079,75 @@ async def test_global_session_list_returns_all_user_sessions(client):
     sessions = response.json()
     assert len(sessions) == 2
     assert {s["last_integration_name"] for s in sessions} == {"First Chat", "Second Chat"}
+
+
+@pytest.mark.asyncio
+async def test_global_session_list_orders_by_latest_message_activity(client):
+    from tests.conftest import TestingSessionLocal
+    from app.models import Message, Session, User
+    from sqlalchemy import select
+
+    token, first_id, second_id = await setup_user_with_two_integrations(client)
+    base_time = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+    async with TestingSessionLocal() as db:
+        user = (await db.execute(select(User).where(User.username == "mixeduser"))).scalar_one()
+        older_session = Session(
+            id=str(uuid.uuid4()),
+            user_id=user.id,
+            integration_id=first_id,
+            integration_name="First Chat",
+            last_integration_id=first_id,
+            last_integration_name="First Chat",
+            title="older created but recently active",
+            created_at=base_time,
+        )
+        newer_session = Session(
+            id=str(uuid.uuid4()),
+            user_id=user.id,
+            integration_id=second_id,
+            integration_name="Second Chat",
+            last_integration_id=second_id,
+            last_integration_name="Second Chat",
+            title="newer created but stale",
+            created_at=base_time + timedelta(days=1),
+        )
+        db.add_all([older_session, newer_session])
+        await db.flush()
+        db.add_all([
+            Message(
+                session_id=older_session.id,
+                role="user",
+                content="old start",
+                sequence=1,
+                integration_id=first_id,
+                integration_name="First Chat",
+                created_at=base_time,
+            ),
+            Message(
+                session_id=newer_session.id,
+                role="user",
+                content="newer start",
+                sequence=1,
+                integration_id=second_id,
+                integration_name="Second Chat",
+                created_at=base_time + timedelta(days=1),
+            ),
+            Message(
+                session_id=older_session.id,
+                role="user",
+                content="recent follow-up",
+                sequence=2,
+                integration_id=first_id,
+                integration_name="First Chat",
+                created_at=base_time + timedelta(days=2),
+            ),
+        ])
+        await db.commit()
+        older_session_id = older_session.id
+        newer_session_id = newer_session.id
+
+    response = await client.get("/api/chat/sessions", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    assert [session["id"] for session in response.json()] == [older_session_id, newer_session_id]
