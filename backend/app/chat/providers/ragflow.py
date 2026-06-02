@@ -1,146 +1,139 @@
-import asyncio
 import json
 from typing import AsyncGenerator
-from ragflow_sdk import RAGFlow
-from app.chat.providers.base import ChatProvider, ChatResponse, StreamChunk, ChatHistoryMessage
+
+import httpx
+
+from app.chat.providers.base import ChatHistoryMessage, ChatProvider, ChatResponse, StreamChunk
 
 
 class RagflowProvider(ChatProvider):
     def __init__(self, config: dict):
-        self.base_url = config["base_url"]
+        self.base_url = config["base_url"].rstrip("/")
         self.api_key = config["api_key"]
         self.chat_or_agent_id = config.get("chat_id") or config.get("agent_id")
-        self.entity_type = config.get("type", "chat")  # "chat" or "agent"
+        self.entity_type = config.get("type", "chat")
+        self.model = config.get("model", "model")
+        self.parameters = config.get("parameters", {})
+        self._headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
 
-    def _get_entity(self, rag: RAGFlow):
-        if self.entity_type == "chat":
-            chats = rag.list_chats(id=self.chat_or_agent_id)
-            if not chats:
-                raise ValueError(f"RAGFlow chat {self.chat_or_agent_id} not found")
-            return chats[0]
-        else:
-            agents = rag.list_agents()
-            agent = next((a for a in agents if a.id == self.chat_or_agent_id), None)
-            if not agent:
-                raise ValueError(f"RAGFlow agent {self.chat_or_agent_id} not found")
-            return agent
+    def _endpoint(self) -> str:
+        if self.entity_type == "agent":
+            return f"{self.base_url}/api/v1/agents_openai/{self.chat_or_agent_id}/chat/completions"
+        return f"{self.base_url}/api/v1/openai/{self.chat_or_agent_id}/chat/completions"
 
-    def _build_question(
+    def _chat_fallback_endpoint(self) -> str:
+        return f"{self.base_url}/api/v1/chats_openai/{self.chat_or_agent_id}/chat/completions"
+
+    def _should_use_chat_fallback(self, exc: httpx.HTTPStatusError) -> bool:
+        return self.entity_type == "chat" and exc.response.status_code in {404, 405}
+
+    def _build_messages(
         self,
         message: str,
         context: list[str] | None = None,
         history: list[ChatHistoryMessage] | None = None,
-    ) -> str:
-        if not context and not history:
-            return message
-
-        parts = []
+    ) -> list[dict]:
+        messages = []
         if context:
-            parts.extend(f"[Injected context]: {c}" for c in context)
+            for ctx in context:
+                messages.append({"role": "system", "content": f"[Injected context]: {ctx}"})
         if history:
-            transcript = ["[Conversation so far]"]
-            for item in history:
-                label = "User" if item["role"] == "user" else "Assistant"
-                transcript.append(f"{label}: {item['content']}")
-            parts.append("\n".join(transcript))
-        parts.append(f"User question: {message}")
-        return "\n\n".join(parts)
+            messages.extend({"role": item["role"], "content": item["content"]} for item in history)
+        messages.append({"role": "user", "content": message})
+        return messages
 
-    def _extract_references(self, message_obj) -> list[dict] | None:
-        refs = getattr(message_obj, "reference", None)
-        if not refs:
-            return None
-        if isinstance(refs, list):
-            result = []
-            for ref in refs:
-                if isinstance(ref, dict):
-                    result.append(ref)
-                else:
-                    result.append({
-                        "content": getattr(ref, "content", ""),
-                        "document_name": getattr(ref, "document_name", ""),
-                        "similarity": getattr(ref, "similarity", 0),
-                    })
-            return result if result else None
-        return None
+    def _payload(self, message: str, context=None, history=None, stream=False) -> dict:
+        payload = {
+            "model": self.model,
+            "messages": self._build_messages(message, context, history),
+            "stream": stream,
+            **self.parameters,
+        }
+        if self.entity_type == "chat":
+            extra_body = dict(payload.get("extra_body") or {})
+            extra_body.setdefault("reference", True)
+            payload["extra_body"] = extra_body
+        return payload
 
-    def _sync_send(
-        self,
-        message: str,
-        context: list[str] | None = None,
-        history: list[ChatHistoryMessage] | None = None,
-    ) -> ChatResponse:
-        rag = RAGFlow(api_key=self.api_key, base_url=self.base_url)
-        entity = self._get_entity(rag)
-        session = entity.create_session()
-        question = self._build_question(message, context, history)
+    def _extract_reference(self, message_obj: dict) -> dict | list[dict] | None:
+        reference = message_obj.get("reference")
+        return reference or None
 
-        full_content = ""
-        references = None
-        for chunk in session.ask(question, stream=False):
-            full_content = chunk.content
-            references = self._extract_references(chunk)
+    async def send_message(self, message: str, context=None, history=None) -> ChatResponse:
+        payload = self._payload(message, context, history, stream=False)
+        async with httpx.AsyncClient(headers=self._headers, timeout=120.0) as client:
+            try:
+                response = await client.post(self._endpoint(), json=payload)
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                if not self._should_use_chat_fallback(exc):
+                    raise
+                response = await client.post(self._chat_fallback_endpoint(), json=payload)
+                response.raise_for_status()
+            data = response.json()
 
+        message_obj = data["choices"][0]["message"]
         return ChatResponse(
-            content=full_content,
-            references=references,
-            provider_session_id=session.id,
+            content=message_obj.get("content") or "",
+            references=self._extract_reference(message_obj),
+            provider_session_id=data.get("id"),
         )
 
-    async def send_message(
+    async def _stream_chunks(
         self,
-        message: str,
-        context: list[str] | None = None,
-        history: list[ChatHistoryMessage] | None = None,
-    ) -> ChatResponse:
-        return await asyncio.to_thread(self._sync_send, message, context, history)
+        client: httpx.AsyncClient,
+        endpoint: str,
+        payload: dict,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        references = None
+        provider_session_id = None
+        async with client.stream("POST", endpoint, json=payload) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if not line.startswith("data:"):
+                    continue
+                data_str = line[len("data:"):].strip()
+                if data_str.strip() == "[DONE]":
+                    yield StreamChunk(
+                        content="",
+                        done=True,
+                        references=references,
+                        provider_session_id=provider_session_id,
+                    )
+                    return
+                data = json.loads(data_str)
+                provider_session_id = data.get("id") or provider_session_id
+                delta = data["choices"][0].get("delta", {})
+                if delta.get("reference"):
+                    references = delta["reference"]
+                content = delta.get("content") or ""
+                if content:
+                    yield StreamChunk(content=content)
+        yield StreamChunk(
+            content="",
+            done=True,
+            references=references,
+            provider_session_id=provider_session_id,
+        )
 
     async def stream_message(
         self,
         message: str,
-        context: list[str] | None = None,
-        history: list[ChatHistoryMessage] | None = None,
+        context=None,
+        history=None,
     ) -> AsyncGenerator[StreamChunk, None]:
-        rag = RAGFlow(api_key=self.api_key, base_url=self.base_url)
-        entity = self._get_entity(rag)
-        session = entity.create_session()
-        question = self._build_question(message, context, history)
-
-        queue: asyncio.Queue[StreamChunk | Exception] = asyncio.Queue()
-        loop = asyncio.get_event_loop()
-
-        def _enqueue(item: StreamChunk | Exception) -> None:
-            loop.call_soon_threadsafe(queue.put_nowait, item)
-
-        def _stream_sync():
-            last_content = ""
-            last_chunk = None
+        payload = self._payload(message, context, history, stream=True)
+        async with httpx.AsyncClient(headers=self._headers, timeout=120.0) as client:
+            yielded_chunk = False
             try:
-                for chunk in session.ask(question, stream=True):
-                    content = chunk.content or ""
-                    if content.startswith(last_content):
-                        new_text = content[len(last_content):]
-                    else:
-                        # Content reset (e.g. agent switching components)
-                        new_text = content
-                    last_content = content
-                    last_chunk = chunk
-                    if new_text:
-                        _enqueue(StreamChunk(content=new_text))
-                references = self._extract_references(last_chunk) if last_chunk else None
-                _enqueue(StreamChunk(
-                    content="", done=True, references=references,
-                    provider_session_id=session.id,
-                ))
-            except Exception as e:
-                _enqueue(e)
-
-        loop.run_in_executor(None, _stream_sync)
-
-        while True:
-            chunk = await queue.get()
-            if isinstance(chunk, Exception):
-                raise chunk
-            yield chunk
-            if chunk.done:
-                break
+                async for chunk in self._stream_chunks(client, self._endpoint(), payload):
+                    yielded_chunk = True
+                    yield chunk
+            except httpx.HTTPStatusError as exc:
+                if yielded_chunk or not self._should_use_chat_fallback(exc):
+                    raise
+                async for chunk in self._stream_chunks(client, self._chat_fallback_endpoint(), payload):
+                    yield chunk
