@@ -75,7 +75,9 @@ Tests use an in-memory SQLite database. The `setup_db` fixture in `conftest.py` 
 
 Each chat session can contain up to 10 total user questions. The first request creates a `Session`; follow-up requests include `session_id` and append new `Message` rows to that same session.
 
-The backend uses local EdgeAI messages as the source of truth for follow-up context. Before each provider call, prior `user` and `assistant` messages are loaded in sequence order and passed to the provider as `history`. Selected pinned responses are still passed separately as request-scoped `context`.
+The backend uses local EdgeAI messages as the source of truth for follow-up context. Before each provider call, prior `user` and `assistant` messages are loaded in sequence order and passed to the provider as `history`; the newest user message is appended last. Selected pinned responses are still passed separately as request-scoped `context`.
+
+Users can switch the target integration between follow-up questions in the frontend composer. Each message stores the integration id and name used for that turn, while the session keeps the original `integration_id` for compatibility and `last_integration_id` / `last_integration_name` for resume behavior and recent-session display.
 
 For non-streaming requests, the provider is called before new messages are persisted. If the provider fails, no new rows are created. For streaming requests, the user message is persisted before the SSE response starts, and the assistant message is persisted when streaming completes. If streaming fails after the user message is saved, an assistant error message is persisted so the transcript remains coherent.
 
@@ -90,6 +92,12 @@ class ChatProvider(ABC):
 ```
 
 The `context` parameter carries pinned response content for cross-chat injection. Providers prepend it to the user's question.
+
+RAGFlow integrations use OpenAI-compatible chat completion endpoints:
+
+- Chat primary endpoint: `/api/v1/openai/{chat_id}/chat/completions`
+- Chat deprecated fallback: `/api/v1/chats_openai/{chat_id}/chat/completions`, retried when the primary endpoint returns `404` or `405`
+- Agent endpoint: `/api/v1/agents_openai/{agent_id}/chat/completions`
 
 ### Non-Streaming Persistence Order
 
@@ -109,20 +117,32 @@ Authorization: Bearer <access_token>
 |----------|--------|------|-------------|
 | `/api/auth/login` | POST | No | `{username, password}` → `{access_token, refresh_token, user}` |
 | `/api/auth/refresh` | POST | No | `{refresh_token}` → `{access_token, refresh_token}` |
-| `/api/auth/me` | GET | User | Current user info |
+| `/api/auth/me` | GET | User | Current user info, including `default_integration_id` |
 | `/api/auth/change-password` | POST | User | Change own password `{current_password, new_password}` |
+| `/api/auth/default-integration` | PUT | User | Set account default chat preference. Body: `{integration_id: string | null}`. A string target must be accessible to the user; `null` clears the default. |
 
 ### Chat
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| `/api/chat/{integration_id}/send` | POST | User | Send message. Body: `{message, pinned_ids?, stream?, session_id?}`. Omit `session_id` to create a new session; include it to append to an existing session with fewer than 10 user questions. |
-| `/api/chat/{integration_id}/sessions` | GET | User | List 100 most recent sessions |
-| `/api/chat/{integration_id}/sessions/{id}` | GET | User | Get session with messages |
+| `/api/chat/send` | POST | User | Send the first message and create a session. Body: `{integration_id, message, pinned_ids?, stream?}`. |
+| `/api/chat/sessions` | GET | User | List the authenticated user's 100 most recent sessions across all integrations. |
+| `/api/chat/sessions/{id}` | GET | User | Get an owned session with messages and message-level integration metadata. |
+| `/api/chat/sessions/{id}/send` | POST | User | Append a follow-up to an owned session with fewer than 10 user questions. Body: `{integration_id, message, pinned_ids?, stream?}`. |
+
+The session-centered routes are the primary chat API. The frontend can choose a different `integration_id` on each send, including follow-up sends. The backend sends the full EdgeAI transcript to the selected provider and appends the newest user message last.
+
+Legacy integration-scoped routes remain available for compatibility:
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/chat/{integration_id}/send` | POST | User | Compatibility send endpoint. Body: `{message, pinned_ids?, stream?, session_id?}`. Omit `session_id` to create a new session; include it to append to an existing session. |
+| `/api/chat/{integration_id}/sessions` | GET | User | Compatibility list endpoint scoped to one integration. |
+| `/api/chat/{integration_id}/sessions/{id}` | GET | User | Compatibility get endpoint for a session under one integration. |
 
 **Streaming:** When `stream: true`, the response is Server-Sent Events:
 - `data: <text>` — content chunks
-- `event: done` + `data: {"references": [...], "provider_session_id": "..."}` — completion
+- `event: done` + `data: {"references": [...], "provider_session_id": "...", "session_id": "..."}` — completion
 - `event: error` + `data: {"detail": "..."}` — error
 
 **Note:** `sse-starlette` uses `\r\n` as its default line separator. The frontend SSE parser strips trailing `\r` from lines before processing to handle this correctly.
@@ -177,7 +197,8 @@ All primary keys are UUID strings. Timestamps are UTC.
 
 ```
 users
-  id, username (unique), fullname, password_hash, role, created_at, last_login
+  id, username (unique), fullname, password_hash, role,
+  default_integration_id → integrations.id, created_at, last_login
 
 integrations
   id, name, provider_type, provider_config (JSON), description, icon,
@@ -185,11 +206,13 @@ integrations
 
 sessions
   id, user_id → users.id, integration_id → integrations.id,
-  ragflow_session_id, title, created_at
+  integration_name, last_integration_id → integrations.id,
+  last_integration_name, ragflow_session_id, title, created_at
 
 messages
-  id, session_id → sessions.id, role, content, references (JSON),
-  pinned, sequence, created_at
+  id, session_id → sessions.id, integration_id → integrations.id,
+  integration_name, role, content, references (JSON), pinned,
+  sequence, created_at
 
 pinned_responses
   id, user_id → users.id, message_id → messages.id,
@@ -205,6 +228,10 @@ user_integration_access
 **Access control:** Users with role `user` only see integrations where a matching `user_integration_access` row exists (deny-by-default). Managers and admins see all integrations.
 
 **Cascade behavior:** Deleting a user or integration explicitly deletes related `user_integration_access` rows via pre-delete queries (not FK CASCADE, since SQLite `PRAGMA foreign_keys` is not enabled).
+
+**Chat integration metadata:** `sessions.integration_id` remains the original integration used to create the conversation for compatibility with legacy routes. `sessions.integration_name` stores that original integration name. `sessions.last_integration_id` and `sessions.last_integration_name` track the most recent integration used in the conversation. Each `messages` row stores the integration id and name for the turn that produced it, so transcripts can show which chat answered each assistant message even when a conversation switches integrations.
+
+**Startup migrations:** Existing SQLite deployments are migrated at application startup by `app/migrations.py`. New schema columns for default integration preferences and session/message integration metadata are added there so deployed databases can be upgraded without manual SQL.
 
 ## Adding a New Provider
 

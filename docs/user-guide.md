@@ -26,29 +26,37 @@ Click the chevron at the top of the sidebar to collapse or expand it. Your prefe
 
 The chat page has three areas:
 
-- **Left panel (top):** Available integrations — each represents a configured AI assistant
-- **Left panel (bottom):** Recent session history for the selected integration
+- **Left panel:** Recent session history across your available chats
 - **Main area:** Chat window with message input
+- **Input bar:** Chat selector, pin selector, message field, and send button
 
 ## Chatting
 
 ### Sending a Message
 
-1. Click an integration from the sidebar to select it
+1. Choose the target chat from the selector in the input bar
 2. Type your message in the input field at the bottom
 3. Press **Enter** or click **Send**
 
-The first message starts a new session. You can ask follow-up questions in that same session until it reaches 10 total questions. The counter in the chat window shows your progress, such as `7/10`.
+The first message starts a new conversation. You can ask follow-up questions in that same conversation until it reaches 10 total questions. The counter in the chat window shows your progress, such as `7/10`.
 
-If the integration has an opening greeting configured, you'll see it as a welcome message when no conversation is active.
+If the selected chat has an opening greeting configured, you'll see it as a welcome message when no conversation is active.
 
-The assistant's response streams in real-time. Once complete, the session appears in the sidebar history.
+The assistant's response streams in real time. Once complete, the conversation appears in Recent Sessions.
+
+### Choosing Chats
+
+The chat selector in the input bar controls where the next message is sent. You can change the selected chat between follow-up questions in the same conversation. EdgeAI sends the visible conversation history to the selected chat, then adds your newest message.
+
+Choosing a chat for one message does not change your account default. Use **Set as default** in the chat selector when you want a chat to be preselected for new conversations.
 
 ### Viewing Past Sessions
 
-Click any session in the **Recent Sessions** sidebar to view both your question and the assistant's response.
+Click any conversation in **Recent Sessions** to view the transcript. Recent Sessions are global across your available chats and show the last-used chat for each conversation.
 
-Past sessions can be continued. Click a session in Recent Sessions to load it, then send another message. If the session has reached 10 questions, the input is disabled and you can use **New Chat** to start a fresh session with the same integration.
+Past conversations can be continued. Click a conversation in Recent Sessions to load it, choose the target chat in the input bar if needed, then send another message. If the conversation has reached 10 questions, the input is disabled and you can use **New Chat** to start a fresh conversation.
+
+Assistant messages show which chat answered them, so a conversation remains easy to follow even when you switch chats between questions.
 
 ## Pinning Responses
 
@@ -69,7 +77,7 @@ Pinning lets you save useful assistant responses and reuse them as context in fu
 
 This is useful for carrying knowledge across different integrations. For example, pin a response from a RAGFlow knowledge base and inject it into an OpenAI chat for further analysis.
 
-Selected pins apply only to the next message you send. After the message is sent, EdgeAI clears the selected pins. Follow-up questions use the session transcript as context, and you can attach pins again whenever a specific follow-up needs them.
+Selected pins are request-scoped and apply only to the next message you send. After the message is sent, EdgeAI clears the selected pins. Follow-up questions use the conversation transcript as context, and you can attach pins again whenever a specific follow-up needs them.
 
 ### Managing Pins
 
