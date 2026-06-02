@@ -287,6 +287,8 @@ async def _send_streaming(
         context,
         history,
         user_sequence + 1,
+        integration.id,
+        integration.name,
         append_lock=append_lock,
     )
 
@@ -333,6 +335,8 @@ async def _stream_response(
     context,
     history,
     assistant_sequence,
+    integration_id,
+    integration_name,
     append_lock=None,
 ):
     """Return SSE streaming response. Saves full message to DB after stream completes."""
@@ -359,6 +363,8 @@ async def _stream_response(
                             full_content,
                             references,
                             assistant_sequence,
+                            integration_id,
+                            integration_name,
                             provider_session_id,
                         )
                         assistant_saved = True
@@ -378,6 +384,8 @@ async def _stream_response(
                     ASSISTANT_STREAM_ERROR_MESSAGE,
                     None,
                     assistant_sequence,
+                    integration_id,
+                    integration_name,
                 )
                 yield {"event": "error", "data": json.dumps({
                     "detail": "Provider error during streaming",
@@ -391,6 +399,8 @@ async def _stream_response(
                     full_content,
                     references,
                     assistant_sequence,
+                    integration_id,
+                    integration_name,
                     provider_session_id,
                 )
         finally:
@@ -405,6 +415,8 @@ async def _save_stream_assistant_message(
     content,
     references,
     assistant_sequence,
+    integration_id,
+    integration_name,
     provider_session_id=None,
 ):
     from app.database import async_session
@@ -416,14 +428,21 @@ async def _save_stream_assistant_message(
             content=content,
             references=_serialize_refs(references),
             sequence=assistant_sequence,
+            integration_id=integration_id,
+            integration_name=integration_name,
         )
         save_db.add(assistant_msg)
+        values = {
+            "last_integration_id": integration_id,
+            "last_integration_name": integration_name,
+        }
         if provider_session_id:
-            await save_db.execute(
-                Session.__table__.update()
-                .where(Session.__table__.c.id == session_id)
-                .values(ragflow_session_id=provider_session_id)
-            )
+            values["ragflow_session_id"] = provider_session_id
+        await save_db.execute(
+            Session.__table__.update()
+            .where(Session.__table__.c.id == session_id)
+            .values(**values)
+        )
         await save_db.commit()
 
 

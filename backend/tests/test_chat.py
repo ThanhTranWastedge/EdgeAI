@@ -164,7 +164,7 @@ async def test_streaming_send_appends_and_returns_session_id(client):
     assert f'"session_id": "{session_id}"' in second.text
     assert stream_histories[1] == [
         {"role": "user", "content": "stream q1"},
-        {"role": "assistant", "content": "streamed answer"},
+        {"role": "assistant", "content": "Assistant (Test Chat): streamed answer"},
     ]
 
 
@@ -288,6 +288,8 @@ async def test_stream_done_event_waits_until_assistant_message_is_persisted(clie
             None,
             [],
             2,
+            integration.id,
+            integration.name,
         )
 
         async for event in response.body_iterator:
@@ -456,7 +458,7 @@ async def test_streaming_append_lock_blocks_second_history_until_first_assistant
         {"role": "user", "content": "initial"},
         {"role": "assistant", "content": "Assistant (Test Chat): initial answer"},
         {"role": "user", "content": "stream append 1"},
-        {"role": "assistant", "content": "first streamed assistant"},
+        {"role": "assistant", "content": "Assistant (Test Chat): first streamed assistant"},
     ]
 
 
@@ -525,6 +527,11 @@ async def test_legacy_integration_route_supports_mixed_target_append(client):
         ("Other append", "Other Chat"),
         ("Other answer", "Other Chat"),
     ]
+
+    original_list = await client.get(f"/api/chat/{iid}/sessions", headers={"Authorization": f"Bearer {token}"})
+    other_list = await client.get(f"/api/chat/{other_iid}/sessions", headers={"Authorization": f"Bearer {token}"})
+    assert len(original_list.json()) == 1
+    assert other_list.json() == []
 
 
 @pytest.mark.asyncio
@@ -742,6 +749,42 @@ async def setup_user_with_two_integrations(client):
 
 
 @pytest.mark.asyncio
+async def test_streaming_new_route_persists_target_metadata(client):
+    from tests.conftest import TestingSessionLocal
+    from app.models import Message, Session
+    from sqlalchemy import select
+
+    token, first_id, _ = await setup_user_with_two_integrations(client)
+    reset_sse_app_status()
+
+    async def fake_stream(message, context=None, history=None):
+        yield type("Chunk", (), {"content": "streamed", "done": False})()
+        yield type("Chunk", (), {"content": "", "done": True, "references": None, "provider_session_id": None})()
+
+    with (
+        patch("app.chat.router.get_provider") as mock_get,
+        patch("app.database.async_session", TestingSessionLocal),
+    ):
+        mock_provider = MagicMock()
+        mock_provider.stream_message = fake_stream
+        mock_get.return_value = mock_provider
+
+        response = await client.post(
+            "/api/chat/send",
+            json={"integration_id": first_id, "message": "stream target", "stream": True},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    session_id = parse_sse_done_data(response.text)["session_id"]
+    async with TestingSessionLocal() as db:
+        session = (await db.execute(select(Session).where(Session.id == session_id))).scalar_one()
+        messages = (await db.execute(select(Message).order_by(Message.sequence))).scalars().all()
+
+    assert session.last_integration_id == first_id
+    assert [m.integration_name for m in messages] == ["First Chat", "First Chat"]
+
+
+@pytest.mark.asyncio
 async def test_new_send_routes_support_mixed_target_followups(client):
     token, first_id, second_id = await setup_user_with_two_integrations(client)
 
@@ -788,6 +831,165 @@ async def test_new_send_routes_support_mixed_target_followups(client):
         ("q2", "Second Chat"),
         ("second answer", "Second Chat"),
     ]
+
+
+@pytest.mark.asyncio
+async def test_global_session_send_rejects_session_owned_by_another_user(client):
+    from tests.conftest import TestingSessionLocal
+    from app.models import User
+
+    token, first_id, _ = await setup_user_with_two_integrations(client)
+
+    other_uid = str(uuid.uuid4())
+    async with TestingSessionLocal() as db:
+        other_user = User(
+            id=other_uid,
+            username="global-other-chat-user",
+            password_hash=hash_password("p"),
+            role="admin",
+        )
+        db.add(other_user)
+        await db.commit()
+
+    other_login = await client.post(
+        "/api/auth/login",
+        json={"username": "global-other-chat-user", "password": "p"},
+    )
+    other_token = other_login.json()["access_token"]
+
+    with patch("app.chat.router.get_provider") as mock_get:
+        mock_provider = AsyncMock()
+        mock_provider.send_message.return_value = ChatResponse(content="answer", references=None, provider_session_id=None)
+        mock_get.return_value = mock_provider
+
+        first = await client.post(
+            "/api/chat/send",
+            json={"integration_id": first_id, "message": "owner question", "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert first.status_code == 200
+        session_id = first.json()["session_id"]
+
+        mock_provider.send_message.reset_mock()
+        rejected = await client.post(
+            f"/api/chat/sessions/{session_id}/send",
+            json={"integration_id": first_id, "message": "intruder question", "stream": False},
+            headers={"Authorization": f"Bearer {other_token}"},
+        )
+
+    assert rejected.status_code == 404
+    assert rejected.json()["detail"] == "Session not found"
+    mock_provider.send_message.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_global_session_send_rejects_inaccessible_current_target(client):
+    from tests.conftest import TestingSessionLocal
+    from app.models import User, Integration, UserIntegrationAccess
+    from app.constants import ROLE_USER
+
+    uid = str(uuid.uuid4())
+    first_id = str(uuid.uuid4())
+    second_id = str(uuid.uuid4())
+    async with TestingSessionLocal() as db:
+        user = User(id=uid, username="global-limited-user", password_hash=hash_password("p"), role=ROLE_USER)
+        first = Integration(
+            id=first_id,
+            name="Allowed Chat",
+            provider_type="openai_compatible",
+            provider_config=json.dumps({"base_url": "http://x", "api_key": "k", "model": "m"}),
+            updated_by=uid,
+        )
+        second = Integration(
+            id=second_id,
+            name="Denied Chat",
+            provider_type="openai_compatible",
+            provider_config=json.dumps({"base_url": "http://x", "api_key": "k", "model": "m"}),
+            updated_by=uid,
+        )
+        access = UserIntegrationAccess(
+            id=str(uuid.uuid4()),
+            user_id=uid,
+            integration_id=first_id,
+            granted_by=uid,
+        )
+        db.add_all([user, first, second, access])
+        await db.commit()
+
+    login = await client.post("/api/auth/login", json={"username": "global-limited-user", "password": "p"})
+    token = login.json()["access_token"]
+
+    with patch("app.chat.router.get_provider") as mock_get:
+        mock_provider = AsyncMock()
+        mock_provider.send_message.return_value = ChatResponse(content="answer", references=None, provider_session_id=None)
+        mock_get.return_value = mock_provider
+
+        first = await client.post(
+            "/api/chat/send",
+            json={"integration_id": first_id, "message": "allowed", "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert first.status_code == 200
+        session_id = first.json()["session_id"]
+
+        mock_provider.send_message.reset_mock()
+        denied = await client.post(
+            f"/api/chat/sessions/{session_id}/send",
+            json={"integration_id": second_id, "message": "denied", "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert denied.status_code == 403
+    assert denied.json()["detail"] == "No access to this integration"
+    mock_provider.send_message.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_global_session_detail_allows_historical_view_after_access_removed(client):
+    from tests.conftest import TestingSessionLocal
+    from app.models import User, Integration, UserIntegrationAccess
+    from app.constants import ROLE_USER
+    from sqlalchemy import delete
+
+    uid = str(uuid.uuid4())
+    iid = str(uuid.uuid4())
+    access_id = str(uuid.uuid4())
+    async with TestingSessionLocal() as db:
+        user = User(id=uid, username="historical-user", password_hash=hash_password("p"), role=ROLE_USER)
+        integration = Integration(
+            id=iid,
+            name="Historical Chat",
+            provider_type="openai_compatible",
+            provider_config=json.dumps({"base_url": "http://x", "api_key": "k", "model": "m"}),
+            updated_by=uid,
+        )
+        access = UserIntegrationAccess(id=access_id, user_id=uid, integration_id=iid, granted_by=uid)
+        db.add_all([user, integration, access])
+        await db.commit()
+
+    login = await client.post("/api/auth/login", json={"username": "historical-user", "password": "p"})
+    token = login.json()["access_token"]
+
+    with patch("app.chat.router.get_provider") as mock_get:
+        mock_provider = AsyncMock()
+        mock_provider.send_message.return_value = ChatResponse(content="answer", references=None, provider_session_id=None)
+        mock_get.return_value = mock_provider
+        created = await client.post("/api/chat/send", json={"integration_id": iid, "message": "q"}, headers={"Authorization": f"Bearer {token}"})
+        session_id = created.json()["session_id"]
+
+    async with TestingSessionLocal() as db:
+        await db.execute(delete(UserIntegrationAccess).where(UserIntegrationAccess.id == access_id))
+        await db.commit()
+
+    detail = await client.get(f"/api/chat/sessions/{session_id}", headers={"Authorization": f"Bearer {token}"})
+    denied_send = await client.post(
+        f"/api/chat/sessions/{session_id}/send",
+        json={"integration_id": iid, "message": "q2"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert detail.status_code == 200
+    assert denied_send.status_code == 403
 
 
 @pytest.mark.asyncio
