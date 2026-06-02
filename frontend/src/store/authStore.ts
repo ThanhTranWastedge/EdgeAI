@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { loginApi, getMeApi, User } from '../api/auth'
+import { loginApi, getMeApi, updateDefaultIntegrationApi, User } from '../api/auth'
 import { TOKEN_KEY, REFRESH_TOKEN_KEY } from '../api/client'
 
 interface AuthState {
@@ -9,6 +9,7 @@ interface AuthState {
   login: (username: string, password: string) => Promise<void>
   logout: () => void
   checkAuth: () => Promise<void>
+  setDefaultIntegration: (integrationId: string | null) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -41,5 +42,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(REFRESH_TOKEN_KEY)
     }
+  },
+
+  setDefaultIntegration: async (integrationId) => {
+    const { data } = await updateDefaultIntegrationApi(integrationId)
+    set({ user: data })
   },
 }))

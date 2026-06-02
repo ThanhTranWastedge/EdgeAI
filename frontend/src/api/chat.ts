@@ -7,11 +7,16 @@ export interface MessageData {
   references: string | null
   pinned: boolean
   sequence: number
+  integration_id: string | null
+  integration_name: string | null
 }
 
 export interface SessionData {
   id: string
   integration_id: string
+  integration_name: string | null
+  last_integration_id: string | null
+  last_integration_name: string | null
   title: string
   created_at: string
 }
@@ -19,6 +24,9 @@ export interface SessionData {
 export interface SessionDetail {
   id: string
   integration_id: string
+  integration_name: string | null
+  last_integration_id: string | null
+  last_integration_name: string | null
   title: string
   messages: MessageData[]
 }
@@ -28,18 +36,56 @@ export interface SendResponse {
   assistant_message: MessageData
 }
 
+const formatErrorDetail = (detail: unknown): string | null => {
+  if (typeof detail === 'string') return detail
+  if (detail && typeof detail === 'object') {
+    try {
+      return JSON.stringify(detail)
+    } catch {
+      return null
+    }
+  }
+
+  return null
+}
+
+const getResponseErrorMessage = async (response: Response) => {
+  try {
+    const text = await response.text()
+    if (!text) return `Chat request failed (${response.status})`
+
+    try {
+      const body: unknown = JSON.parse(text)
+      if (body && typeof body === 'object' && 'detail' in body) {
+        const detail = formatErrorDetail((body as { detail?: unknown }).detail)
+        if (detail) return detail
+      }
+    } catch {
+      return text
+    }
+
+    return text
+  } catch {
+    // fall through to status-based message
+  }
+
+  return `Chat request failed (${response.status})`
+}
+
 export const sendMessageApi = (
   integrationId: string,
   message: string,
   pinnedIds?: string[],
   sessionId?: string | null,
-) =>
-  client.post<SendResponse>(`/chat/${integrationId}/send`, {
+) => {
+  const url = sessionId ? `/chat/sessions/${sessionId}/send` : '/chat/send'
+  return client.post<SendResponse>(url, {
+    integration_id: integrationId,
     message,
     pinned_ids: pinnedIds,
     stream: false,
-    session_id: sessionId || undefined,
   })
+}
 
 export const sendMessageStreamApi = async (
   integrationId: string,
@@ -51,22 +97,23 @@ export const sendMessageStreamApi = async (
   onError: (error: string, sessionId: string | null) => void | Promise<void>,
 ) => {
   const token = localStorage.getItem(TOKEN_KEY)
-  const response = await fetch(`/api/chat/${integrationId}/send`, {
+  const url = sessionId ? `/api/chat/sessions/${sessionId}/send` : '/api/chat/send'
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify({
+      integration_id: integrationId,
       message,
       pinned_ids: pinnedIds,
       stream: true,
-      session_id: sessionId || undefined,
     }),
   })
 
   if (!response.ok) {
-    await onError('Failed to connect to chat provider', null)
+    await onError(await getResponseErrorMessage(response), null)
     return
   }
 
@@ -129,8 +176,14 @@ export const sendMessageStreamApi = async (
   }
 }
 
-export const getSessionsApi = (integrationId: string) =>
+export const getSessionsApi = () =>
+  client.get<SessionData[]>('/chat/sessions')
+
+export const getSessionApi = (sessionId: string) =>
+  client.get<SessionDetail>(`/chat/sessions/${sessionId}`)
+
+export const getIntegrationSessionsApi = (integrationId: string) =>
   client.get<SessionData[]>(`/chat/${integrationId}/sessions`)
 
-export const getSessionApi = (integrationId: string, sessionId: string) =>
+export const getIntegrationSessionApi = (integrationId: string, sessionId: string) =>
   client.get<SessionDetail>(`/chat/${integrationId}/sessions/${sessionId}`)

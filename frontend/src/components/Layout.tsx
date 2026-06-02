@@ -2,7 +2,6 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { MessageSquare, Users, Shield, HelpCircle, Settings, LogOut, ChevronLeft, ChevronRight } from 'lucide-react'
-import IntegrationList from './IntegrationList'
 import SessionHistory from './SessionHistory'
 
 const SIDEBAR_KEY = 'sidebar-collapsed'
@@ -73,7 +72,7 @@ export default function Layout() {
 
   useEffect(() => {
     checkAuth()
-  }, [])
+  }, [checkAuth])
 
   const isActive = (path: string) => location.pathname === path
   const isManagerOrAdmin = user?.role === 'manager' || user?.role === 'admin'
@@ -131,9 +130,8 @@ export default function Layout() {
           )}
         </nav>
 
-        {/* Scrollable middle — integrations + recent sessions */}
+        {/* Scrollable middle — recent sessions */}
         <div className="flex-1 overflow-y-auto">
-          <IntegrationList collapsed={isCollapsed} />
           <SessionHistory collapsed={isCollapsed} />
         </div>
 

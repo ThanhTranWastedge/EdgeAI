@@ -5,6 +5,7 @@ export interface User {
   username: string
   fullname: string | null
   role: string
+  default_integration_id: string | null
 }
 
 export interface LoginResponse {
@@ -18,6 +19,9 @@ export const loginApi = (username: string, password: string) =>
 
 export const getMeApi = () =>
   client.get<User>('/auth/me')
+
+export const updateDefaultIntegrationApi = (integrationId: string | null) =>
+  client.put<User>('/auth/default-integration', { integration_id: integrationId })
 
 export const changePasswordApi = (data: { current_password: string; new_password: string }) =>
   client.post('/auth/change-password', data)

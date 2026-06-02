@@ -7,9 +7,56 @@ interface Props {
   onPin?: (messageId: string) => void
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value)
+
+const addDocumentName = (value: unknown, names: Set<string>) => {
+  if (!isRecord(value)) return
+  const documentName = value.document_name
+  if (typeof documentName === 'string' && documentName.trim()) {
+    names.add(documentName.trim())
+  }
+}
+
+const addChunkDocumentNames = (chunks: unknown, names: Set<string>) => {
+  if (Array.isArray(chunks)) {
+    chunks.forEach((chunk) => addDocumentName(chunk, names))
+    return
+  }
+
+  if (isRecord(chunks)) {
+    Object.values(chunks).forEach((chunk) => addDocumentName(chunk, names))
+  }
+}
+
+const extractReferenceNames = (references: string | null) => {
+  if (!references) return []
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(references)
+  } catch {
+    return []
+  }
+
+  const names = new Set<string>()
+
+  if (Array.isArray(parsed)) {
+    parsed.forEach((reference) => addDocumentName(reference, names))
+  } else if (isRecord(parsed)) {
+    addDocumentName(parsed, names)
+    addChunkDocumentNames(parsed.chunks, names)
+  }
+
+  return Array.from(names)
+}
+
 export default function MessageBubble({ message, onPin }: Props) {
   const isUser = message.role === 'user'
-  const refs = useMemo(() => message.references ? JSON.parse(message.references) : null, [message.references])
+  const referenceNames = useMemo(
+    () => extractReferenceNames(message.references),
+    [message.references],
+  )
 
   return (
     <div className={`flex mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -25,6 +72,11 @@ export default function MessageBubble({ message, onPin }: Props) {
         ) : (
           <div className="markdown-body">
             <Markdown>{message.content}</Markdown>
+          </div>
+        )}
+        {!isUser && message.integration_name && (
+          <div className="mt-2 text-[11px] text-we-muted">
+            Answered by {message.integration_name}
           </div>
         )}
         {!isUser && (
@@ -48,9 +100,9 @@ export default function MessageBubble({ message, onPin }: Props) {
             </button>
           </div>
         )}
-        {refs && refs.length > 0 && (
+        {referenceNames.length > 0 && (
           <div className="mt-2 text-[10px] text-amcs-grey-300">
-            References: {refs.map((r: { document_name: string }) => r.document_name).join(', ')}
+            References: {referenceNames.join(', ')}
           </div>
         )}
       </div>
