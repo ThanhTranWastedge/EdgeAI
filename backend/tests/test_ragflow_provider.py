@@ -113,6 +113,37 @@ def test_ragflow_chat_payload_preserves_configured_extra_body():
     }
 
 
+@pytest.mark.asyncio
+async def test_ragflow_chat_rejects_error_envelope_response():
+    provider = RagflowProvider({
+        "base_url": "http://localhost:9380",
+        "api_key": "ragflow-key",
+        "chat_id": "chat-uuid",
+        "type": "chat",
+    })
+
+    class Response:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"code": 102, "message": "You don't own the chat chat-uuid"}
+
+    class Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+
+        async def post(self, url, json):
+            return Response()
+
+    with patch("app.chat.providers.ragflow.httpx.AsyncClient", return_value=Client()):
+        with pytest.raises(ValueError, match="You don't own the chat"):
+            await provider.send_message("question")
+
+
 @pytest.mark.parametrize("status_code", [404, 405])
 @pytest.mark.asyncio
 async def test_ragflow_chat_falls_back_to_deprecated_openai_endpoint(status_code):
@@ -349,6 +380,45 @@ async def test_ragflow_stream_parses_content_and_reference():
     assert chunks[-1].done is True
     assert chunks[-1].references == {"chunks": {"2": {"document_name": "final.md"}}}
     assert chunks[-1].provider_session_id == "c1"
+
+
+@pytest.mark.asyncio
+async def test_ragflow_stream_rejects_json_error_envelope_response():
+    provider = RagflowProvider({
+        "base_url": "http://localhost:9380",
+        "api_key": "ragflow-key",
+        "chat_id": "chat-uuid",
+        "type": "chat",
+    })
+
+    class StreamResponse:
+        def raise_for_status(self):
+            pass
+
+        async def aiter_lines(self):
+            yield "{\"code\":102,\"message\":\"You don't own the chat chat-uuid\"}"
+
+    class StreamContext:
+        async def __aenter__(self):
+            return StreamResponse()
+
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+
+    class Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+
+        def stream(self, method, url, json):
+            return StreamContext()
+
+    with patch("app.chat.providers.ragflow.httpx.AsyncClient", return_value=Client()):
+        with pytest.raises(ValueError, match="You don't own the chat"):
+            async for _ in provider.stream_message("question"):
+                pass
 
 
 @pytest.mark.parametrize("status_code", [404, 405])

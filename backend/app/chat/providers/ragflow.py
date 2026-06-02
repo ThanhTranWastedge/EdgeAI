@@ -62,6 +62,16 @@ class RagflowProvider(ChatProvider):
         reference = message_obj.get("reference")
         return reference or None
 
+    def _raise_for_error_envelope(self, data: object) -> None:
+        if not isinstance(data, dict):
+            return
+        if "choices" in data:
+            return
+        message = data.get("message")
+        code = data.get("code")
+        if message:
+            raise ValueError(f"RAGFlow returned error {code}: {message}")
+
     async def send_message(self, message: str, context=None, history=None) -> ChatResponse:
         payload = self._payload(message, context, history, stream=False)
         async with httpx.AsyncClient(headers=self._headers, timeout=120.0) as client:
@@ -75,6 +85,7 @@ class RagflowProvider(ChatProvider):
                 response.raise_for_status()
             data = response.json()
 
+        self._raise_for_error_envelope(data)
         message_obj = data["choices"][0]["message"]
         return ChatResponse(
             content=message_obj.get("content") or "",
@@ -94,6 +105,10 @@ class RagflowProvider(ChatProvider):
             response.raise_for_status()
             async for line in response.aiter_lines():
                 if not line.startswith("data:"):
+                    try:
+                        self._raise_for_error_envelope(json.loads(line.strip()))
+                    except json.JSONDecodeError:
+                        pass
                     continue
                 data_str = line[len("data:"):].strip()
                 if data_str.strip() == "[DONE]":
@@ -105,6 +120,7 @@ class RagflowProvider(ChatProvider):
                     )
                     return
                 data = json.loads(data_str)
+                self._raise_for_error_envelope(data)
                 provider_session_id = data.get("id") or provider_session_id
                 delta = data["choices"][0].get("delta", {})
                 if delta.get("reference"):
