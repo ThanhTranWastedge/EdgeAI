@@ -1,6 +1,6 @@
 import json
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Integration, User, UserIntegrationAccess
@@ -91,6 +91,11 @@ async def delete_integration(
         raise HTTPException(status_code=404, detail="Integration not found")
     await db.execute(
         delete(UserIntegrationAccess).where(UserIntegrationAccess.integration_id == integration_id)
+    )
+    await db.execute(
+        update(User)
+        .where(User.default_integration_id == integration_id)
+        .values(default_integration_id=None)
     )
     await db.delete(integration)
     await db.commit()

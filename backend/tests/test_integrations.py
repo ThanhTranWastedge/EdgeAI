@@ -140,3 +140,47 @@ async def test_update_integration_greeting(client):
     )
     assert response.status_code == 200
     assert response.json()["opening_greeting"] == "Welcome!"
+
+
+@pytest.mark.asyncio
+async def test_delete_integration_clears_user_defaults(client):
+    from tests.conftest import TestingSessionLocal
+    from app.models import User, Integration
+    from app.auth.utils import hash_password
+    from sqlalchemy import select
+    import json
+    import uuid
+
+    admin_id = str(uuid.uuid4())
+    integration_id = str(uuid.uuid4())
+    async with TestingSessionLocal() as db:
+        admin = User(id=admin_id, username="default-admin", password_hash=hash_password("admin"), role="admin")
+        integration = Integration(
+            id=integration_id,
+            name="Defaulted Chat",
+            provider_type="openai_compatible",
+            provider_config=json.dumps({"base_url": "http://x", "api_key": "k", "model": "m"}),
+            updated_by=admin_id,
+        )
+        user = User(
+            id=str(uuid.uuid4()),
+            username="default-owner",
+            password_hash=hash_password("p"),
+            role="user",
+            default_integration_id=integration_id,
+        )
+        db.add_all([admin, integration, user])
+        await db.commit()
+
+    login = await client.post("/api/auth/login", json={"username": "default-admin", "password": "admin"})
+    token = login.json()["access_token"]
+
+    response = await client.delete(
+        f"/api/integrations/{integration_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 204
+    async with TestingSessionLocal() as db:
+        result = await db.execute(select(User.default_integration_id).where(User.username == "default-owner"))
+        assert result.scalar_one() is None

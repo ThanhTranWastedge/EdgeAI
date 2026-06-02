@@ -3,10 +3,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
-from app.models import User
+from app.models import User, Integration, UserIntegrationAccess
 from app.auth.utils import verify_password, hash_password, create_access_token, create_refresh_token, decode_token
-from app.auth.schemas import LoginRequest, TokenResponse, RefreshRequest, UserResponse, ChangePasswordRequest
+from app.auth.schemas import (
+    LoginRequest,
+    TokenResponse,
+    RefreshRequest,
+    UserResponse,
+    ChangePasswordRequest,
+    DefaultIntegrationRequest,
+)
 from app.auth.dependencies import get_current_user
+from app.constants import ROLE_USER
 from jose import JWTError
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -57,6 +65,39 @@ async def refresh(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 async def me(user: User = Depends(get_current_user)):
+    return UserResponse.model_validate(user)
+
+
+async def _ensure_default_integration_access(db: AsyncSession, user: User, integration_id: str) -> None:
+    result = await db.execute(select(Integration.id).where(Integration.id == integration_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Integration not found")
+
+    if user.role != ROLE_USER:
+        return
+
+    access = await db.execute(
+        select(UserIntegrationAccess.id).where(
+            UserIntegrationAccess.user_id == user.id,
+            UserIntegrationAccess.integration_id == integration_id,
+        )
+    )
+    if not access.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="No access to this integration")
+
+
+@router.put("/default-integration", response_model=UserResponse)
+async def update_default_integration(
+    body: DefaultIntegrationRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if body.integration_id is not None:
+        await _ensure_default_integration_access(db, user, body.integration_id)
+
+    user.default_integration_id = body.integration_id
+    await db.commit()
+    await db.refresh(user)
     return UserResponse.model_validate(user)
 
 

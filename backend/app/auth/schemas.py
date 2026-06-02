@@ -21,6 +21,7 @@ class UserResponse(BaseModel):
     username: str
     fullname: str | None = None
     role: str
+    default_integration_id: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -28,3 +29,7 @@ class UserResponse(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+
+class DefaultIntegrationRequest(BaseModel):
+    integration_id: str | None = None
