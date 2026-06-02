@@ -8,7 +8,14 @@ from app.database import get_db
 from app.models import Integration, Session, Message, PinnedResponse, User, UserIntegrationAccess
 from app.auth.dependencies import get_current_user
 from app.constants import ROLE_USER
-from app.chat.schemas import SendMessageRequest, SendMessageResponse, SessionResponse, SessionDetailResponse, MessageResponse
+from app.chat.schemas import (
+    SendMessageRequest,
+    TargetedSendMessageRequest,
+    SendMessageResponse,
+    SessionResponse,
+    SessionDetailResponse,
+    MessageResponse,
+)
 from app.chat.providers.base import ChatHistoryMessage
 from app.chat.providers.factory import get_provider
 
@@ -50,20 +57,33 @@ async def _ensure_integration_access(db: AsyncSession, user: User, integration_i
 async def _get_owned_session(
     db: AsyncSession,
     user: User,
-    integration_id: str,
     session_id: str,
 ) -> Session:
     result = await db.execute(
         select(Session).where(
             Session.id == session_id,
             Session.user_id == user.id,
-            Session.integration_id == integration_id,
         )
     )
     session = result.scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     return session
+
+
+async def _get_integration_for_send(db: AsyncSession, user: User, integration_id: str) -> Integration:
+    result = await db.execute(select(Integration).where(Integration.id == integration_id))
+    integration = result.scalar_one_or_none()
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    await _ensure_integration_access(db, user, integration_id)
+    return integration
+
+
+def _message_history_content(message: Message) -> str:
+    if message.role == "assistant" and message.integration_name:
+        return f"Assistant ({message.integration_name}): {message.content}"
+    return message.content
 
 
 async def _count_user_messages(db: AsyncSession, session_id: str) -> int:
@@ -92,7 +112,7 @@ async def _get_history(db: AsyncSession, session_id: str) -> list[ChatHistoryMes
     )
     messages = result.scalars().all()
     return [
-        {"role": m.role, "content": m.content}
+        {"role": m.role, "content": _message_history_content(m)}
         for m in messages
         if m.role in {"user", "assistant"}
     ]
@@ -101,19 +121,197 @@ async def _get_history(db: AsyncSession, session_id: str) -> list[ChatHistoryMes
 async def _prepare_session_for_send(
     db: AsyncSession,
     user: User,
-    integration_id: str,
-    body: SendMessageRequest,
+    session_id: str | None,
 ) -> tuple[Session | None, list[ChatHistoryMessage], int | None]:
-    if not body.session_id:
+    if not session_id:
         return None, [], None
 
-    session = await _get_owned_session(db, user, integration_id, body.session_id)
+    session = await _get_owned_session(db, user, session_id)
     user_message_count = await _count_user_messages(db, session.id)
     if user_message_count >= MAX_USER_QUESTIONS_PER_SESSION:
         raise HTTPException(status_code=400, detail="Session question limit reached")
     history = await _get_history(db, session.id)
     next_sequence = await _get_next_sequence(db, session.id)
     return session, history, next_sequence
+
+
+def _new_session(user: User, integration: Integration, message: str) -> Session:
+    title = message[:80] + ("..." if len(message) > 80 else "")
+    return Session(
+        user_id=user.id,
+        integration_id=integration.id,
+        integration_name=integration.name,
+        last_integration_id=integration.id,
+        last_integration_name=integration.name,
+        title=title,
+    )
+
+
+def _apply_last_target(session: Session, integration: Integration) -> None:
+    session.last_integration_id = integration.id
+    session.last_integration_name = integration.name
+
+
+async def _send_to_integration(
+    integration_id: str,
+    message: str,
+    pinned_ids: list[str] | None,
+    stream: bool,
+    session_id: str | None,
+    db: AsyncSession,
+    user: User,
+):
+    integration = await _get_integration_for_send(db, user, integration_id)
+
+    context = None
+    if pinned_ids:
+        pin_result = await db.execute(
+            select(PinnedResponse).where(
+                PinnedResponse.id.in_(pinned_ids),
+                PinnedResponse.user_id == user.id,
+            )
+        )
+        context = [p.content for p in pin_result.scalars().all()]
+
+    append_lock = _get_session_append_lock(session_id) if session_id else None
+    if append_lock:
+        await append_lock.acquire()
+
+    try:
+        existing_session, history, next_sequence = await _prepare_session_for_send(db, user, session_id)
+        if stream:
+            response = await _send_streaming(
+                db, user, integration, message, context, existing_session, history, next_sequence, append_lock
+            )
+            append_lock = None
+            return response
+        return await _send_non_streaming(
+            db, user, integration, message, context, existing_session, history, next_sequence
+        )
+    finally:
+        if append_lock:
+            append_lock.release()
+
+
+async def _send_non_streaming(
+    db: AsyncSession,
+    user: User,
+    integration: Integration,
+    message: str,
+    context,
+    existing_session: Session | None,
+    history,
+    next_sequence: int | None,
+):
+    provider = get_provider(integration)
+    try:
+        response = await provider.send_message(message, context=context, history=history)
+    except Exception as e:
+        logger.error(f"Provider error: {e}")
+        raise HTTPException(status_code=502, detail="Chat provider is unavailable")
+
+    if existing_session:
+        session = existing_session
+        user_sequence = next_sequence or 1
+    else:
+        session = _new_session(user, integration, message)
+        db.add(session)
+        await db.flush()
+        user_sequence = 1
+
+    _apply_last_target(session, integration)
+    user_msg = Message(
+        session_id=session.id,
+        role="user",
+        content=message,
+        sequence=user_sequence,
+        integration_id=integration.id,
+        integration_name=integration.name,
+    )
+    assistant_msg = Message(
+        session_id=session.id,
+        role="assistant",
+        content=response.content,
+        references=_serialize_refs(response.references),
+        sequence=user_sequence + 1,
+        integration_id=integration.id,
+        integration_name=integration.name,
+    )
+    if response.provider_session_id:
+        session.ragflow_session_id = response.provider_session_id
+    db.add_all([user_msg, assistant_msg])
+    await db.commit()
+    await db.refresh(assistant_msg)
+
+    return SendMessageResponse(
+        session_id=session.id,
+        assistant_message=MessageResponse.model_validate(assistant_msg),
+    )
+
+
+async def _send_streaming(
+    db: AsyncSession,
+    user: User,
+    integration: Integration,
+    message: str,
+    context,
+    existing_session: Session | None,
+    history,
+    next_sequence: int | None,
+    append_lock=None,
+):
+    if existing_session:
+        session = existing_session
+        user_sequence = next_sequence or 1
+    else:
+        session = _new_session(user, integration, message)
+        db.add(session)
+        await db.flush()
+        user_sequence = 1
+
+    _apply_last_target(session, integration)
+    user_msg = Message(
+        session_id=session.id,
+        role="user",
+        content=message,
+        sequence=user_sequence,
+        integration_id=integration.id,
+        integration_name=integration.name,
+    )
+    db.add(user_msg)
+    await db.commit()
+    return await _stream_response(
+        integration,
+        session.id,
+        message,
+        context,
+        history,
+        user_sequence + 1,
+        append_lock=append_lock,
+    )
+
+
+@router.post("/send")
+async def send_new_message(
+    body: TargetedSendMessageRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return await _send_to_integration(
+        body.integration_id, body.message, body.pinned_ids, body.stream, None, db, user
+    )
+
+
+@router.post("/sessions/{session_id}/send")
+async def send_session_message(
+    session_id: str,
+    body: TargetedSendMessageRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return await _send_to_integration(
+        body.integration_id, body.message, body.pinned_ids, body.stream, session_id, db, user
+    )
 
 
 @router.post("/{integration_id}/send")
@@ -123,115 +321,9 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    # Fetch integration
-    result = await db.execute(select(Integration).where(Integration.id == integration_id))
-    integration = result.scalar_one_or_none()
-    if not integration:
-        raise HTTPException(status_code=404, detail="Integration not found")
-
-    await _ensure_integration_access(db, user, integration_id)
-
-    # Fetch pinned context if provided
-    context = None
-    if body.pinned_ids:
-        pin_result = await db.execute(
-            select(PinnedResponse).where(
-                PinnedResponse.id.in_(body.pinned_ids),
-                PinnedResponse.user_id == user.id,
-            )
-        )
-        pins = pin_result.scalars().all()
-        context = [p.content for p in pins]
-
-    append_lock = _get_session_append_lock(body.session_id) if body.session_id else None
-    if append_lock:
-        await append_lock.acquire()
-
-    try:
-        existing_session, history, next_sequence = await _prepare_session_for_send(
-            db, user, integration_id, body
-        )
-
-        if body.stream:
-            if existing_session:
-                session = existing_session
-                user_sequence = next_sequence or 1
-            else:
-                title = body.message[:80] + ("..." if len(body.message) > 80 else "")
-                session = Session(user_id=user.id, integration_id=integration_id, title=title)
-                db.add(session)
-                await db.flush()
-                user_sequence = 1
-
-            user_msg = Message(
-                session_id=session.id,
-                role="user",
-                content=body.message,
-                sequence=user_sequence,
-            )
-            db.add(user_msg)
-            await db.commit()
-            response = await _stream_response(
-                integration,
-                session.id,
-                body.message,
-                context,
-                history,
-                user_sequence + 1,
-                append_lock=append_lock,
-            )
-            append_lock = None
-            return response
-
-        # Non-streaming: call provider before persisting
-        provider = get_provider(integration)
-        try:
-            response = await provider.send_message(body.message, context=context, history=history)
-        except Exception as e:
-            logger.error(f"Provider error: {e}")
-            raise HTTPException(status_code=502, detail="Chat provider is unavailable")
-
-        if existing_session:
-            session = existing_session
-            user_sequence = next_sequence or 1
-        else:
-            title = body.message[:80] + ("..." if len(body.message) > 80 else "")
-            session = Session(
-                user_id=user.id,
-                integration_id=integration_id,
-                title=title,
-                ragflow_session_id=response.provider_session_id,
-            )
-            db.add(session)
-            await db.flush()
-            user_sequence = 1
-
-        user_msg = Message(
-            session_id=session.id,
-            role="user",
-            content=body.message,
-            sequence=user_sequence,
-        )
-        assistant_msg = Message(
-            session_id=session.id,
-            role="assistant",
-            content=response.content,
-            references=_serialize_refs(response.references),
-            sequence=user_sequence + 1,
-        )
-        if response.provider_session_id:
-            session.ragflow_session_id = response.provider_session_id
-        db.add_all([user_msg, assistant_msg])
-        await db.commit()
-        await db.refresh(assistant_msg)
-
-        return SendMessageResponse(
-            session_id=session.id,
-            assistant_message=MessageResponse.model_validate(assistant_msg),
-        )
-    finally:
-        if append_lock:
-            append_lock.release()
+    return await _send_to_integration(
+        integration_id, body.message, body.pinned_ids, body.stream, body.session_id, db, user
+    )
 
 
 async def _stream_response(
@@ -335,6 +427,41 @@ async def _save_stream_assistant_message(
         await save_db.commit()
 
 
+@router.get("/sessions", response_model=list[SessionResponse])
+async def list_global_sessions(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Session)
+        .where(Session.user_id == user.id)
+        .order_by(Session.created_at.desc())
+        .limit(100)
+    )
+    return [SessionResponse.model_validate(s) for s in result.scalars().all()]
+
+
+@router.get("/sessions/{session_id}", response_model=SessionDetailResponse)
+async def get_global_session(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    session = await _get_owned_session(db, user, session_id)
+    msg_result = await db.execute(
+        select(Message).where(Message.session_id == session_id).order_by(Message.sequence)
+    )
+    return SessionDetailResponse(
+        id=session.id,
+        integration_id=session.integration_id,
+        integration_name=session.integration_name,
+        last_integration_id=session.last_integration_id,
+        last_integration_name=session.last_integration_name,
+        title=session.title,
+        messages=[MessageResponse.model_validate(m) for m in msg_result.scalars().all()],
+    )
+
+
 @router.get("/{integration_id}/sessions", response_model=list[SessionResponse])
 async def list_sessions(
     integration_id: str,
@@ -377,6 +504,9 @@ async def get_session(
     return SessionDetailResponse(
         id=session.id,
         integration_id=session.integration_id,
+        integration_name=session.integration_name,
+        last_integration_id=session.last_integration_id,
+        last_integration_name=session.last_integration_name,
         title=session.title,
         messages=[MessageResponse.model_validate(m) for m in messages],
     )

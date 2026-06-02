@@ -108,7 +108,7 @@ async def test_send_message_appends_to_existing_session_with_history(client):
     assert second.json()["session_id"] == session_id
     assert mock_provider.send_message.call_args_list[1].kwargs["history"] == [
         {"role": "user", "content": "First question"},
-        {"role": "assistant", "content": "First answer"},
+        {"role": "assistant", "content": "Assistant (Test Chat): First answer"},
     ]
 
     detail = await client.get(
@@ -224,17 +224,17 @@ async def test_concurrent_non_streaming_appends_are_serialized_with_complete_his
     later_history = append_1_history if len(append_1_history) == 4 else append_2_history
     assert first_history == [
         {"role": "user", "content": "initial"},
-        {"role": "assistant", "content": "answer for initial"},
+        {"role": "assistant", "content": "Assistant (Test Chat): answer for initial"},
     ]
     assert later_history[:2] == first_history
     assert later_history[2:] in (
         [
             {"role": "user", "content": "append 1"},
-            {"role": "assistant", "content": "answer for append 1"},
+            {"role": "assistant", "content": "Assistant (Test Chat): answer for append 1"},
         ],
         [
             {"role": "user", "content": "append 2"},
-            {"role": "assistant", "content": "answer for append 2"},
+            {"role": "assistant", "content": "Assistant (Test Chat): answer for append 2"},
         ],
     )
 
@@ -454,14 +454,14 @@ async def test_streaming_append_lock_blocks_second_history_until_first_assistant
     assert parse_sse_done_data(second_append.text)["session_id"] == session_id
     assert stream_histories["stream append 2"] == [
         {"role": "user", "content": "initial"},
-        {"role": "assistant", "content": "initial answer"},
+        {"role": "assistant", "content": "Assistant (Test Chat): initial answer"},
         {"role": "user", "content": "stream append 1"},
         {"role": "assistant", "content": "first streamed assistant"},
     ]
 
 
 @pytest.mark.asyncio
-async def test_append_rejects_session_from_another_integration(client):
+async def test_legacy_integration_route_supports_mixed_target_append(client):
     token, iid = await setup_user_and_integration(client)
     from tests.conftest import TestingSessionLocal
     from app.models import Integration
@@ -481,10 +481,12 @@ async def test_append_rejects_session_from_another_integration(client):
         db.add(other)
         await db.commit()
 
-    mock_response = ChatResponse(content="First answer", references=None, provider_session_id=None)
     with patch("app.chat.router.get_provider") as mock_get:
         mock_provider = AsyncMock()
-        mock_provider.send_message.return_value = mock_response
+        mock_provider.send_message.side_effect = [
+            ChatResponse(content="First answer", references=None, provider_session_id=None),
+            ChatResponse(content="Other answer", references=None, provider_session_id=None),
+        ]
         mock_get.return_value = mock_provider
         first = await client.post(
             f"/api/chat/{iid}/send",
@@ -497,13 +499,32 @@ async def test_append_rejects_session_from_another_integration(client):
         mock_provider.send_message.reset_mock()
         response = await client.post(
             f"/api/chat/{other_iid}/send",
-            json={"message": "Bad append", "session_id": session_id, "stream": False},
+            json={"message": "Other append", "session_id": session_id, "stream": False},
             headers={"Authorization": f"Bearer {token}"},
         )
 
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Session not found"
-    mock_provider.send_message.assert_not_called()
+    assert response.status_code == 200
+    assert response.json()["session_id"] == session_id
+    assert mock_provider.send_message.call_args.kwargs["history"] == [
+        {"role": "user", "content": "First question"},
+        {"role": "assistant", "content": "Assistant (Test Chat): First answer"},
+    ]
+
+    detail = await client.get(
+        f"/api/chat/{iid}/sessions/{session_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    data = detail.json()
+    assert data["integration_id"] == iid
+    assert data["integration_name"] == "Test Chat"
+    assert data["last_integration_id"] == other_iid
+    assert data["last_integration_name"] == "Other Chat"
+    assert [(m["content"], m["integration_name"]) for m in data["messages"]] == [
+        ("First question", "Test Chat"),
+        ("First answer", "Test Chat"),
+        ("Other append", "Other Chat"),
+        ("Other answer", "Other Chat"),
+    ]
 
 
 @pytest.mark.asyncio
@@ -688,3 +709,102 @@ async def test_get_session_detail(client):
     assert data["messages"][0]["role"] == "user"
     assert data["messages"][1]["role"] == "assistant"
     assert data["messages"][1]["content"] == "detailed answer"
+
+
+async def setup_user_with_two_integrations(client):
+    from tests.conftest import TestingSessionLocal
+    from app.models import User, Integration
+
+    uid = str(uuid.uuid4())
+    first_id = str(uuid.uuid4())
+    second_id = str(uuid.uuid4())
+    async with TestingSessionLocal() as db:
+        user = User(id=uid, username="mixeduser", password_hash=hash_password("p"), role="admin")
+        first = Integration(
+            id=first_id,
+            name="First Chat",
+            provider_type="openai_compatible",
+            provider_config=json.dumps({"base_url": "http://x", "api_key": "k", "model": "m"}),
+            updated_by=uid,
+        )
+        second = Integration(
+            id=second_id,
+            name="Second Chat",
+            provider_type="openai_compatible",
+            provider_config=json.dumps({"base_url": "http://x", "api_key": "k", "model": "m"}),
+            updated_by=uid,
+        )
+        db.add_all([user, first, second])
+        await db.commit()
+
+    login = await client.post("/api/auth/login", json={"username": "mixeduser", "password": "p"})
+    return login.json()["access_token"], first_id, second_id
+
+
+@pytest.mark.asyncio
+async def test_new_send_routes_support_mixed_target_followups(client):
+    token, first_id, second_id = await setup_user_with_two_integrations(client)
+
+    with patch("app.chat.router.get_provider") as mock_get:
+        mock_provider = AsyncMock()
+        mock_provider.send_message.side_effect = [
+            ChatResponse(content="first answer", references=None, provider_session_id=None),
+            ChatResponse(content="second answer", references=None, provider_session_id=None),
+        ]
+        mock_get.return_value = mock_provider
+
+        first = await client.post(
+            "/api/chat/send",
+            json={"integration_id": first_id, "message": "q1", "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        session_id = first.json()["session_id"]
+        second = await client.post(
+            f"/api/chat/sessions/{session_id}/send",
+            json={"integration_id": second_id, "message": "q2", "stream": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert second.json()["session_id"] == session_id
+    assert mock_provider.send_message.call_args_list[1].kwargs["history"] == [
+        {"role": "user", "content": "q1"},
+        {"role": "assistant", "content": "Assistant (First Chat): first answer"},
+    ]
+
+    detail = await client.get(
+        f"/api/chat/sessions/{session_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    data = detail.json()
+    assert data["integration_id"] == first_id
+    assert data["integration_name"] == "First Chat"
+    assert data["last_integration_id"] == second_id
+    assert data["last_integration_name"] == "Second Chat"
+    assert [(m["content"], m["integration_name"]) for m in data["messages"]] == [
+        ("q1", "First Chat"),
+        ("first answer", "First Chat"),
+        ("q2", "Second Chat"),
+        ("second answer", "Second Chat"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_global_session_list_returns_all_user_sessions(client):
+    token, first_id, second_id = await setup_user_with_two_integrations(client)
+
+    with patch("app.chat.router.get_provider") as mock_get:
+        mock_provider = AsyncMock()
+        mock_provider.send_message.return_value = ChatResponse(content="answer", references=None, provider_session_id=None)
+        mock_get.return_value = mock_provider
+
+        await client.post("/api/chat/send", json={"integration_id": first_id, "message": "first"}, headers={"Authorization": f"Bearer {token}"})
+        await client.post("/api/chat/send", json={"integration_id": second_id, "message": "second"}, headers={"Authorization": f"Bearer {token}"})
+
+    response = await client.get("/api/chat/sessions", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    sessions = response.json()
+    assert len(sessions) == 2
+    assert {s["last_integration_name"] for s in sessions} == {"First Chat", "Second Chat"}

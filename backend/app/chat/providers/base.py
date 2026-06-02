@@ -11,7 +11,7 @@ class ChatHistoryMessage(TypedDict):
 @dataclass
 class ChatResponse:
     content: str
-    references: list[dict] | None = None
+    references: object | None = None
     provider_session_id: str | None = None
 
 
@@ -19,7 +19,7 @@ class ChatResponse:
 class StreamChunk:
     content: str
     done: bool = False
-    references: list[dict] | None = None
+    references: object | None = None
     provider_session_id: str | None = None
 
 
