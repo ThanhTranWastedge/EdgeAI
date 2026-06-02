@@ -24,6 +24,11 @@ class User(Base):
     fullname = Column(String, nullable=True)
     password_hash = Column(String, nullable=False)
     role = Column(String, nullable=False, default=ROLE_USER)
+    default_integration_id = Column(
+        String,
+        ForeignKey("integrations.id", use_alter=True),
+        nullable=True,
+    )
     created_at = Column(DateTime, default=utcnow)
     last_login = Column(DateTime, nullable=True)
 
@@ -48,12 +53,15 @@ class Session(Base):
     id = Column(String, primary_key=True, default=new_uuid)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     integration_id = Column(String, ForeignKey("integrations.id"), nullable=False)
+    integration_name = Column(String, nullable=True)
+    last_integration_id = Column(String, ForeignKey("integrations.id"), nullable=True)
+    last_integration_name = Column(String, nullable=True)
     ragflow_session_id = Column(String, nullable=True)
     title = Column(String, nullable=False)
     created_at = Column(DateTime, default=utcnow)
 
     messages = relationship("Message", back_populates="session", order_by="Message.sequence")
-    integration = relationship("Integration")
+    integration = relationship("Integration", foreign_keys=[integration_id])
 
 
 class Message(Base):
@@ -66,6 +74,8 @@ class Message(Base):
     references = Column(Text, nullable=True)  # serialized JSON
     pinned = Column(Boolean, default=False)
     sequence = Column(Integer, nullable=False)
+    integration_id = Column(String, ForeignKey("integrations.id"), nullable=True)
+    integration_name = Column(String, nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
     session = relationship("Session", back_populates="messages")
