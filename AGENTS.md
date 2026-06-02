@@ -56,6 +56,47 @@ SECRET_KEY=secret ADMIN_PASSWORD=admin docker compose up -d
 
 Docker serves the frontend on port `3000`. Vite dev server uses port `5173` and proxies `/api` to backend port `8000`.
 
+## Updating Deployed Servers
+
+When shipping changes to other servers, commit and push from the development machine first:
+
+```bash
+git status --short --branch
+git add <changed-files>
+git commit -m "<type>: <summary>"
+git push origin master
+```
+
+On each server, update the checkout, back up the SQLite database, rebuild, and restart:
+
+```bash
+cd /path/to/EdgeAI
+docker compose stop backend
+cp ./data/edgeai.db ./data/edgeai.db.bak-$(date +%Y%m%d-%H%M%S)
+cp ./data/edgeai.db-wal ./data/edgeai.db-wal.bak-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+cp ./data/edgeai.db-shm ./data/edgeai.db-shm.bak-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+git fetch origin
+git checkout master
+git pull --ff-only origin master
+docker compose down
+docker compose up -d --build
+```
+
+Schema updates are handled by idempotent startup migrations in `backend/app/migrations.py`; normally do not run manual `ALTER TABLE` statements. After restart, verify the schema and services:
+
+```bash
+docker compose exec backend python - <<'PY'
+import sqlite3
+conn = sqlite3.connect('/app/data/edgeai.db')
+conn.row_factory = sqlite3.Row
+for table in ('users', 'sessions', 'messages'):
+    cols = [row['name'] for row in conn.execute(f'pragma table_info({table})')]
+    print(table, cols)
+PY
+docker compose ps
+curl http://localhost:3000/
+```
+
 ## Backend Conventions
 
 - Keep route modules organized by feature: `auth`, `integrations`, `chat`, `pins`, `admin`, `manager`.

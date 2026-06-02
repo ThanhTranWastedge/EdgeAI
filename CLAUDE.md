@@ -25,6 +25,47 @@ SECRET_KEY=secret ADMIN_PASSWORD=admin docker compose up -d  # :3000
 
 SECRET_KEY env var is required for all backend commands. Tests use in-memory SQLite.
 
+## Update & Deployment Commands
+
+Commit and push changes from the development machine before updating other servers:
+
+```bash
+git status --short --branch
+git add <changed-files>
+git commit -m "<type>: <summary>"
+git push origin master
+```
+
+On each deployed server:
+
+```bash
+cd /path/to/EdgeAI
+docker compose stop backend
+cp ./data/edgeai.db ./data/edgeai.db.bak-$(date +%Y%m%d-%H%M%S)
+cp ./data/edgeai.db-wal ./data/edgeai.db-wal.bak-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+cp ./data/edgeai.db-shm ./data/edgeai.db-shm.bak-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+git fetch origin
+git checkout master
+git pull --ff-only origin master
+docker compose down
+docker compose up -d --build
+```
+
+Schema updates are applied by startup migrations in `backend/app/migrations.py`. Do not run manual schema SQL unless a release explicitly says to. Verify the deployed schema and service health after restart:
+
+```bash
+docker compose exec backend python - <<'PY'
+import sqlite3
+conn = sqlite3.connect('/app/data/edgeai.db')
+conn.row_factory = sqlite3.Row
+for table in ('users', 'sessions', 'messages'):
+    cols = [row['name'] for row in conn.execute(f'pragma table_info({table})')]
+    print(table, cols)
+PY
+docker compose ps
+curl http://localhost:3000/
+```
+
 ## Architecture
 
 **RAGFlow Chat Gateway** — wraps RAGFlow and OpenAI-compatible APIs behind a unified chat UI with user management and cross-chat context injection (pins).
@@ -74,6 +115,7 @@ Tests use `httpx.AsyncClient` with ASGI transport against in-memory SQLite. Each
 - Frontend Dockerfile: multi-stage Node build + nginx serving static + reverse proxy to backend
 - nginx.conf: SSE-specific headers (no buffering, Connection='', 300s timeout)
 - Data volume: `./data` mounted for SQLite persistence
+- Startup migrations in `backend/app/migrations.py` apply missing SQLite columns when the backend starts.
 - `.dockerignore` in both `backend/` and `frontend/` excludes dev-only files (tests, docs, CLAUDE.md)
 - Deploy servers use `git clone --no-checkout` + sparse-checkout to exclude `CLAUDE.md` and `docs/`
 - Full deployment guide: `docs/deployment-guide.md`
